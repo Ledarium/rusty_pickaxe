@@ -2,7 +2,7 @@ extern crate tiny_keccak;
 extern crate rustc_hex;
 extern crate web3;
 
-use log::{debug, error, log_enabled, info, Level};
+use log::debug;
 
 use std::fs::File;
 use std::io::Read;
@@ -15,10 +15,9 @@ use web3::contract::{Contract, Options};
 use web3::types::{Address, Bytes, H256, U256};
 
 use secp256k1::SecretKey;
-use web3::ethabi::{encode, token::Token};
+use web3::ethabi::{encode, token::Token, FixedBytes};
 
 use serde::Deserialize;
-use serde_json::{Result, Number};
 
 #[derive(Debug, Deserialize)]
 struct Network {
@@ -43,25 +42,24 @@ struct Config {
     claim: Claim,
 }
 
+fn hash(bytes: Vec<u8>) -> [u8; 32] {
+    let mut h = Keccak::v256();
+    h.update(&bytes);
+    let mut res = [0u8; 32];
+    h.finalize(&mut res);
+    return res;
+}
+
 #[tokio::main]
 async fn main() -> web3::Result<()> {
     env_logger::init();
-    let mut file = File::open("config.json").unwrap();
+    let config_path = std::env::args().nth(1).expect("no config given");
+    let mut file = File::open(config_path).unwrap();
     let mut filedata = String::new();
     file.read_to_string(&mut filedata).unwrap();
 
     let config: Config = serde_json::from_str(&filedata).unwrap();
     debug!("{:?}", config);
-
-    let hex = "00000000000000000000000000000000000000000000000000000000000000ea";
-    info!("{}", hex);
-    let bytes: Vec<u8> = hex.from_hex().unwrap();
-    let mut h = Keccak::v256();
-    h.update(&bytes);
-    let mut res = [0u8; 32];
-    h.finalize(&mut res);
-    let out: String = res.to_hex();
-    println!("{}", out);
 
     /*
     tokio::task::spawn_blocking(|| {
@@ -81,23 +79,36 @@ async fn main() -> web3::Result<()> {
     )
     .unwrap();
 
+    let tx = contract.query("gems", (config.gem_type,), config.address, Options::default(), None);
     /*
-    (
-        name,
-        color,
-        entropy,
-        difficulty,
-        gemsPerMine,
-        multiplier,
-        crafter,
-        manager,
-        pendingManager,
-    ) = network.functions.gems(args.gem).call()
-    (chain_id, entropy, gemAddr, senderAddr, kind, nonce, salt)
-    ["uint256", "bytes32", "address", "address", "uint", "uint", "uint"]
+    #[derive(Debug)]
+    struct GemInfo {
+        name: String,
+        color: String,
+        entropy: Bytes, //2
+        difficulty: U256, //3
+        gems_per_mine: U256,
+        multiplier: U256,
+        crafter: Address,
+        manager: Address,
+        pending_manager: Address,
+    }
     */
-    let tx = contract.call("gems", config.gem_type, config.address, Options::default()).await?;
-    let work = encode(&[Token::Uint(chain_id)], ); 
+    let gem_info: (String, String, FixedBytes, U256, U256, U256, Address, Address, Address) = tx.await.unwrap();
+    // implement From
+    // (https://stackoverflow.com/questions/53194323/is-there-any-way-of-converting-a-struct-to-a-tuple)
+    debug!("{:?}", gem_info);
+    let entropy = Token::Bytes(gem_info.2);
+    for i in 0..i64::MAX { 
+        //(chain_id, entropy, gemAddr, senderAddr, kind, nonce, salt)
+        let work = encode(&[
+            Token::Uint(chain_id),
+            entropy,
+            Token::Address(config.network.gem_address),
+            Token::Address(config.address)
+        ]); 
+        debug!("{:?}", work);
+    }
 
     Ok(())
 }
