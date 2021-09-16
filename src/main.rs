@@ -7,7 +7,6 @@ use std::str::FromStr;
 use pretty_hex::*;
 
 use std::mem::transmute;
-use rustc_hex::{FromHex, ToHex};
 
 use web3::contract::Contract;
 use web3::types::{Address, Bytes, H160, H256, U256};
@@ -93,6 +92,15 @@ async fn main() -> web3::Result<()> {
     println!("Diff is {:?}", gem_info.3);
     let result = cpu::ez_cpu_mine(&mut owork);
     println!("Here is salt {:?}", result);
+
+    let tx = contract
+        .call("mine", (config.gem_type, result), config.address, web3::contract::Options::default())
+        .await
+        .unwrap();
+    debug!("{:?}",tx);
+    // Sign the tx (can be done offline)
+    //let signed = web3.accounts().sign_transaction(tx, &prvk).await?;
+
     Ok(())
 }
 

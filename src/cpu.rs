@@ -23,11 +23,11 @@ pub fn prepare_data(pre_work: &PreWork, target: u128) -> OptimizedWork {
     let mut ret = OptimizedWork {
         keccak: h,
         salt_low: 0,
-        target: [0u8; 32],
+        target: [0xFFu8; 32],
     };
     let target_bytes = target.to_be_bytes();
-    for i in 16..32 {
-        ret.target[i] = target_bytes[i-16]
+    for i in 0..16 {
+        ret.target[i] = target_bytes[i]
     }
     return ret;
 }
@@ -43,25 +43,32 @@ pub fn optimized_hash(work: &OptimizedWork) -> [u8; 32] {
 
 pub fn ez_cpu_mine (owork: &mut OptimizedWork) -> u128 {
     info!("Starting mining, target {:?}", u128::from_be_bytes(owork.target[16..32].try_into().unwrap()));
-
     let start_time = Instant::now();
-    let mut hash = [0u8; 32];
+    let mut hash = [0u8;32];
     let mut found = 0u128;
-    for salt in 0..u128::MAX {
-        if salt % 500000 == 1 {
-            debug!("Trying salt {}", salt);
-            let elapsed = start_time.elapsed();
-            println!("Elapsed time: {:.2?}, hashrate = {}", elapsed, salt as f32/elapsed.as_secs_f32());
-        }
+    for iter in 0..u128::MAX {
+        //let salt = rand::thread_rng().gen_range(0..u128::MAX);
+        let salt = iter;
         owork.salt_low = salt;
         hash = optimized_hash(&owork);
         for index in 0..32 { //idk rusty way to write this
-            if hash[index] < owork.target[index] {
+            if hash[index] > owork.target[index] {
                 break;
-            } else if index == 32 {
+            } else if hash[index] < owork.target[index] {
                 found = salt;
+                break;
             }
         }
+        if found > 0 { break };
+        if iter % 500000 == 1 {
+            debug!("Trying salt {}", salt);
+            let elapsed = start_time.elapsed();
+            println!("Elapsed time: {:.2?}, hashrate = {}", elapsed, iter as f32/elapsed.as_secs_f32());
+        }
     }
+    let string_hash: String = hash.to_hex();
+    let string_target: String = owork.target.to_hex();
+    debug!("Hash:   {}", string_hash);
+    debug!("Target: {}", string_target);
     return found;
 }
