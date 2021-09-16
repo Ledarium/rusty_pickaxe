@@ -238,7 +238,7 @@ dependencies = [
  "fixed-hash",
  "impl-rlp",
  "impl-serde",
- "tiny-keccak",
+ "tiny-keccak 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1151,7 +1151,7 @@ dependencies = [
  "secp256k1",
  "serde",
  "serde_json",
- "tiny-keccak",
+ "tiny-keccak 2.0.2",
  "tokio",
  "web3",
 ]
@@ -1425,6 +1425,13 @@ checksum = "ca8a50ef2360fbd1eeb0ecd46795a87a19024eb4b53c5dc916ca1fd95fe62438"
 dependencies = [
  "libc",
  "winapi",
+]
+
+[[package]]
+name = "tiny-keccak"
+version = "2.0.2"
+dependencies = [
+ "crunchy",
 ]
 
 [[package]]
@@ -1748,7 +1755,7 @@ dependencies = [
  "serde",
  "serde_json",
  "soketto",
- "tiny-keccak",
+ "tiny-keccak 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tokio-stream",
  "tokio-util",
