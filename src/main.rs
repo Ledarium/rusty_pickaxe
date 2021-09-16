@@ -3,8 +3,10 @@ use log::{debug, info};
 use std::fs::File;
 use std::io::Read;
 use std::str::FromStr;
+use std::time::Instant;
 use pretty_hex::*;
 
+use std::mem::transmute;
 use rustc_hex::{FromHex, ToHex};
 use tiny_keccak::{Hasher, Keccak};
 
@@ -12,7 +14,6 @@ use web3::contract::Contract;
 use web3::types::{Address, Bytes, H160, H256, U256};
 
 use secp256k1::SecretKey;
-use web3::ethabi::{encode, token::Token, FixedBytes};
 
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +26,7 @@ fn vtoa<T, const N: usize>(v: Vec<T>) -> [T; N] {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Work {
+struct PreWork {
     _pad1: [u32; 7],
     chain_id: u32,
     entropy: [u8; 32],
@@ -35,7 +36,13 @@ struct Work {
     gem_id: u32,
     _pad3: [u32; 7],
     eth_nonce: u32,
-    salt: [u32; 8],
+}
+#[derive(Debug)]
+struct OptimizedWork {
+    data: Vec<u8>,
+    salt_high: u128,
+    salt_low: u128,
+    target: [u8; 32],
 }
 
 #[derive(Debug, Deserialize)]
@@ -61,9 +68,11 @@ struct Config {
     claim: Claim,
 }
 
-fn hash(bytes: Vec<u8>) -> [u8; 32] {
+fn optimized_hash(work: &OptimizedWork) -> [u8; 32] {
     let mut h = Keccak::v256();
-    h.update(&bytes);
+    h.update(&work.data);
+    h.update(&work.salt_high.to_be_bytes());
+    h.update(&work.salt_low.to_be_bytes());
     let mut res = [0u8; 32];
     h.finalize(&mut res);
     return res;
@@ -115,12 +124,13 @@ async fn main() -> web3::Result<()> {
         pending_manager: Address,
     }
     */
-    let gem_info: (String, String, FixedBytes, U256, U256, U256, Address, Address, Address) = tx.await.unwrap();
+    let gem_info: (String, String, Vec<u8>, U256, U256, U256, Address, Address, Address) = tx.await.unwrap();
     debug!("Got gem_info {:?}", gem_info);
 
     let eth_nonce = web3.eth().transaction_count(config.address, None).await.unwrap();
+
     //wow ethabi sucks. just spent 5+hours on figuring this stuff out
-    let work = Work {
+    let pre_work = PreWork {
         _pad1: [0u32; 7],
         chain_id: chain_id.as_u32(),
         entropy: vtoa(gem_info.2),
@@ -130,17 +140,61 @@ async fn main() -> web3::Result<()> {
         sender_address: config.address.to_fixed_bytes(),
         _pad3: [0u32; 7],
         eth_nonce: eth_nonce.as_u32(),
-        salt: [0u32; 8],
     };
     let bytes = bincode::options()
         .with_fixint_encoding()
         .allow_trailing_bytes()
         .with_big_endian()
-        .serialize(&work).unwrap();
-    info!("Here is some work for you: {:02X?}", bytes.hex_dump());
+        .serialize(&pre_work).unwrap();
+    /*
+    info!("Here is some work for you: {:?}", owork.data.hex_dump());
+    let hash: String = optimized_hash(owork).to_hex();
+    info!("Here is hash {:?}", hash);
+    */
 
-
-    //for i in 0..i64::MAX { }
-
+    let mut owork = OptimizedWork {
+        data: bytes,
+        salt_high: 0u128,
+        salt_low: 0u128,
+        target: [0xFFu8; 32],
+    };
+    
+    println!("Diff is {:?}", gem_info.3);
+    let target = div_up(u128::MAX, gem_info.3.as_u128()).to_be_bytes();
+    for i in 16..32 {
+        owork.target[i] = target[i-16]
+    }
+//    owork.target = 
+    let result = ez_cpu_mine(&mut owork);
+    println!("Here is salt {:?}", result);
     Ok(())
+}
+
+pub fn div_up(a: u128, b: u128) -> u128 {
+    return a / b + (a % b != 0) as u128;
+}
+
+fn ez_cpu_mine (owork: &mut OptimizedWork) -> u128 {
+    info!("Starting mining, target {:?}", u128::from_be_bytes(owork.target[16..32].try_into().unwrap()));
+
+    let start_time = Instant::now();
+    let mut hash = [0u8; 32];
+    let mut found = 0u128;
+    for salt in 0..u128::MAX {
+        if salt % 500000 == 1 {
+            debug!("Trying salt {}", salt);
+            let elapsed = start_time.elapsed();
+            println!("Elapsed time: {:.2?}, hashrate = {}", elapsed, salt as f32/elapsed.as_secs_f32());
+        }
+        owork.salt_low = salt;
+        hash = optimized_hash(&owork);
+        for index in 0..32 { //idk rusty way to write this
+            if hash[index] < owork.target[index] {
+                break;
+            } else if index == 32 {
+                found = salt;
+            }
+        }
+    }
+    return found;
 }
