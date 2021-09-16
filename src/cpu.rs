@@ -2,27 +2,39 @@ use tiny_keccak::{Hasher, Keccak};
 use log::{debug, info};
 use std::convert::TryInto;
 use std::time::Instant;
-//use crate::utils::PreWork;
+use bincode::Options;
+use crate::utils::PreWork;
 
 pub struct OptimizedWork {
-    pub data: Vec<u8>,
-    pub salt_high: u128,
+    pub keccak: Keccak,
     pub salt_low: u128,
     pub target: [u8; 32],
 }
 
-/*
-pub fn prepare_data(pre_work: &PreWork) -> OptimizedWork {
+pub fn prepare_data(pre_work: &PreWork, target: u128) -> OptimizedWork {
     let mut h = Keccak::v256();
-    h.update(&pre_work.data);
-    h.update(&pre_work.salt_high.to_be_bytes());
-*/
+    let bytes = bincode::options()
+        .with_fixint_encoding()
+        .allow_trailing_bytes()
+        .with_big_endian()
+        .serialize(&pre_work).unwrap();
+    h.update(&bytes);
+    h.update(&[0u8,16]); //salt high bits
+    let mut ret = OptimizedWork {
+        keccak: h,
+        salt_low: 0,
+        target: [0u8; 32],
+    };
+    let target_bytes = target.to_be_bytes();
+    for i in 16..32 {
+        ret.target[i] = target_bytes[i-16]
+    }
+    return ret;
+}
 
 
 pub fn optimized_hash(work: &OptimizedWork) -> [u8; 32] {
-    let mut h = Keccak::v256();
-    h.update(&work.data);
-    h.update(&work.salt_high.to_be_bytes());
+    let mut h = work.keccak.clone();
     h.update(&work.salt_low.to_be_bytes());
     let mut res = [0u8; 32];
     h.finalize(&mut res);

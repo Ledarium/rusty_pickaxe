@@ -14,7 +14,6 @@ use web3::types::{Address, Bytes, H160, H256, U256};
 
 use secp256k1::SecretKey;
 
-use bincode::Options;
 
 mod cpu;
 mod utils;
@@ -82,11 +81,6 @@ async fn main() -> web3::Result<()> {
         _pad3: [0u32; 7],
         eth_nonce: eth_nonce.as_u32(),
     };
-    let bytes = bincode::options()
-        .with_fixint_encoding()
-        .allow_trailing_bytes()
-        .with_big_endian()
-        .serialize(&pre_work).unwrap();
 
     /*
     info!("Here is some work for you: {:?}", owork.data.hex_dump());
@@ -94,19 +88,9 @@ async fn main() -> web3::Result<()> {
     info!("Here is hash {:?}", hash);
     */
 
-    let mut owork = cpu::OptimizedWork {
-        data: bytes,
-        salt_high: 0u128,
-        salt_low: 0u128,
-        target: [0xFFu8; 32],
-    };
+    let mut owork = cpu::prepare_data(&pre_work, div_up(u128::MAX, gem_info.3.as_u128()));
     
     println!("Diff is {:?}", gem_info.3);
-    let target = div_up(u128::MAX, gem_info.3.as_u128()).to_be_bytes();
-    for i in 16..32 {
-        owork.target[i] = target[i-16]
-    }
-//    owork.target = 
     let result = cpu::ez_cpu_mine(&mut owork);
     println!("Here is salt {:?}", result);
     Ok(())
