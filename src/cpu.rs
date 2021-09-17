@@ -6,6 +6,7 @@ use bincode::Options;
 use rustc_hex::{FromHex, ToHex};
 use crate::utils::PreWork;
 
+#[derive(Clone)]
 pub struct OptimizedWork {
     pub keccak: Keccak,
     pub target: [u8; 32],
@@ -23,7 +24,7 @@ pub fn prepare_data(pre_work: &PreWork, target: &[u8; 32]) -> OptimizedWork {
     let string: String = bytes.to_hex();
     debug!("hex data: {}", string);
     let mut ret = OptimizedWork {
-        keccak: h,
+        keccak: h.clone(),
         target: [0xFFu8; 32],
     };
     for i in 0..32 {
@@ -57,7 +58,6 @@ pub fn simple_hash(pre_work: &PreWork, salt: u128) -> [u8; 32] {
 
 pub fn ez_cpu_mine (pre_work: &PreWork, target: [u8; 32]) -> u128 {
     let owork = prepare_data(pre_work, &target);
-    info!("Starting mining, target {:?}", u128::from_be_bytes(owork.target[16..32].try_into().unwrap()));
     let start_time = Instant::now();
     let mut hash = [0u8;32];
     let mut found = 0u128;
@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn test_seq_hash() {
         for i in 1..3 {
-            let owork = prepare_data(&zero_work, 0);
+            let owork = prepare_data(&zero_work, &[0u8; 32]);
             let shash: String = simple_hash(&zero_work, i).to_hex();
             let ohash: String = optimized_hash(&owork, i).to_hex();
             assert_eq!(shash, ohash);
@@ -142,23 +142,35 @@ mod tests {
 
     #[test]
     fn test_zero_optimized_hash() {
-        let owork = prepare_data(&zero_work, 0);
+        let owork = prepare_data(&zero_work, &[0u8; 32]);
         let ohash: String = optimized_hash(&owork, 0).to_hex();
         assert_eq!(ohash, "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9");
     }
 
-    /*
     #[test]
     fn test_keccak_clone() {
-        let mut h = Keccak::v256();
+        use bincode::Options;
+        use tiny_keccak::{Hasher, Keccak};
+        let mut h0 = Keccak::v256();
         let bytes = bincode::options()
             .with_fixint_encoding()
             .allow_trailing_bytes()
             .with_big_endian()
-            .serialize(&pre_work).unwrap();
-        h.update(&bytes);
-        h.update(&[0u8,16]); //salt high bits
-        let string: String = bytes.to_hex();
+            .serialize(&zero_work).unwrap();
+        h0.update(&bytes);
+        h0.update(&[0u8,16]); //salt high bits
+
+        let mut h1 = h0.clone();
+        h1.update(&0u128.to_be_bytes());
+        let mut res1 = [0u8; 32];
+        h1.finalize(&mut res1);
+
+        h0.update(&0u128.to_be_bytes());
+        let mut res0 = [0u8; 32];
+        h0.finalize(&mut res0);
+
+        let s0: String = res0.to_hex();
+        let s1: String = res1.to_hex();
+        assert_eq!(s0, s1)
     }
-    */
 }
