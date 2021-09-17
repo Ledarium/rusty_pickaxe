@@ -1,17 +1,12 @@
 use tiny_keccak::{Hasher, Keccak};
 use log::debug;
 use std::time::Instant;
-use bincode::Options;
 use rustc_hex::ToHex;
-use crate::utils::PreWork;
+use crate::utils::{PreWork, serialize_work};
 
 pub fn prepare_data(pre_work: &PreWork) -> Keccak {
     let mut h = Keccak::v256();
-    let bytes = bincode::options()
-        .with_fixint_encoding()
-        .allow_trailing_bytes()
-        .with_big_endian()
-        .serialize(&pre_work).unwrap();
+    let bytes = serialize_work(pre_work);
     h.update(&bytes);
     h.update(&[0u8; 16]); //salt high bits
     let string: String = bytes.to_hex();
@@ -28,11 +23,7 @@ pub fn optimized_hash(mut h: Keccak, salt: u128) -> [u8; 32] {
 
 pub fn simple_hash(pre_work: &PreWork, salt: u128) -> [u8; 32] {
     let mut h = Keccak::v256();
-    let bytes = bincode::options()
-        .with_fixint_encoding()
-        .allow_trailing_bytes()
-        .with_big_endian()
-        .serialize(&pre_work).unwrap();
+    let bytes = serialize_work(&pre_work);
     h.update(&bytes);
     h.update(&[0u8; 16]);
     h.update(&salt.to_be_bytes());
@@ -76,12 +67,12 @@ pub fn ez_cpu_mine (pre_work: &PreWork, target: [u8; 32]) -> u128 {
 #[cfg(test)]
 mod tests {
     use rustc_hex::ToHex;
-    use crate::utils::PreWork;
+    use crate::utils::{PreWork, serialize_work};
     use crate::cpu::{prepare_data, optimized_hash, simple_hash};
     use web3::types::Address;
     use std::str::FromStr;
 
-    static zero_work: PreWork = PreWork {
+    static ZERO_WORK: PreWork = PreWork {
         _pad1: [0u32; 7],
         chain_id: 0u32,
         entropy: [0u8; 32],
@@ -95,16 +86,16 @@ mod tests {
     #[test]
     fn test_seq_hash() {
         for i in 1..3 {
-            let owork = prepare_data(&zero_work);
-            let shash: String = simple_hash(&zero_work, i).to_hex();
+            let owork = prepare_data(&ZERO_WORK);
+            let shash: String = simple_hash(&ZERO_WORK, i).to_hex();
             let ohash: String = optimized_hash(owork, i).to_hex();
-            println!("{}{}", shash, ohash);
+            assert_eq!(shash, ohash);
         }
     }
 
     #[test]
     fn test_zero_simple_hash() {
-        let shash: String = simple_hash(&zero_work, 0).to_hex();
+        let shash: String = simple_hash(&ZERO_WORK, 0).to_hex();
         assert_eq!(shash, "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9");
     }
 
@@ -127,7 +118,7 @@ mod tests {
 
     #[test]
     fn test_zero_optimized_hash() {
-        let owork = prepare_data(&zero_work);
+        let owork = prepare_data(&ZERO_WORK);
         let ohash: String = optimized_hash(owork, 0).to_hex();
         assert_eq!(ohash, "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9");
     }
@@ -137,11 +128,7 @@ mod tests {
         use bincode::Options;
         use tiny_keccak::{Hasher, Keccak};
         let mut h0 = Keccak::v256();
-        let bytes = bincode::options()
-            .with_fixint_encoding()
-            .allow_trailing_bytes()
-            .with_big_endian()
-            .serialize(&zero_work).unwrap();
+        let bytes = serialize_work(&ZERO_WORK);
         h0.update(&bytes);
         h0.update(&[0u8,16]); //salt high bits
 

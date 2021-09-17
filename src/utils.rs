@@ -1,6 +1,15 @@
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use web3::types::Address;
+use bincode::Options;
+
+pub fn serialize_work(pre_work: &PreWork) -> Vec<u8> {
+    return bincode::options()
+        .with_fixint_encoding()
+        .allow_trailing_bytes()
+        .with_big_endian()
+        .serialize(&pre_work).unwrap();
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PreWork {
@@ -47,7 +56,7 @@ pub fn vtoa<T, const N: usize>(v: Vec<T>) -> [T; N] {
 #[cfg(test)]
 mod tests {
     use bincode::Options;
-    use crate::utils::PreWork;
+    use crate::utils::{PreWork, serialize_work};
     use web3::types::Address;
     use std::str::FromStr;
     use rustc_hex::ToHex;
@@ -65,11 +74,7 @@ mod tests {
             _pad3: [0u32; 7],
             eth_nonce: 20u32,
         };
-        let bytes: String = bincode::options()
-            .with_fixint_encoding()
-            .allow_trailing_bytes()
-            .with_big_endian()
-            .serialize(&ex_work).unwrap().to_hex();
+        let bytes: String = serialize_work(&ex_work).to_hex();
         assert_eq!(bytes, "00000000000000000000000000000000000000000000000000000000000000016262626262626262626262626262626262626262626262626262626262626262ffcf8fdee72ac11b5c542428b35eef5769c409f090f8bf6a479f320ead074411a4b0e7944ea8c9c100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000014");
     }
 }
