@@ -1,18 +1,11 @@
 use tiny_keccak::{Hasher, Keccak};
-use log::{debug, info};
-use std::convert::TryInto;
+use log::debug;
 use std::time::Instant;
 use bincode::Options;
-use rustc_hex::{FromHex, ToHex};
+use rustc_hex::ToHex;
 use crate::utils::PreWork;
 
-#[derive(Clone)]
-pub struct OptimizedWork {
-    pub keccak: Keccak,
-    pub target: [u8; 32],
-}
-
-pub fn prepare_data(pre_work: &PreWork, target: &[u8; 32]) -> OptimizedWork {
+pub fn prepare_data(pre_work: &PreWork) -> Keccak {
     let mut h = Keccak::v256();
     let bytes = bincode::options()
         .with_fixint_encoding()
@@ -20,21 +13,13 @@ pub fn prepare_data(pre_work: &PreWork, target: &[u8; 32]) -> OptimizedWork {
         .with_big_endian()
         .serialize(&pre_work).unwrap();
     h.update(&bytes);
-    h.update(&[0u8,16]); //salt high bits
+    h.update(&[0u8; 16]); //salt high bits
     let string: String = bytes.to_hex();
     debug!("hex data: {}", string);
-    let mut ret = OptimizedWork {
-        keccak: h.clone(),
-        target: [0xFFu8; 32],
-    };
-    for i in 0..32 {
-        ret.target[i] = target[i]
-    }
-    return ret;
+    return h;
 }
 
-pub fn optimized_hash(work: &OptimizedWork, salt: u128) -> [u8; 32] {
-    let mut h = work.keccak.clone();
+pub fn optimized_hash(mut h: Keccak, salt: u128) -> [u8; 32] {
     h.update(&salt.to_be_bytes());
     let mut res = [0u8; 32];
     h.finalize(&mut res);
@@ -57,19 +42,19 @@ pub fn simple_hash(pre_work: &PreWork, salt: u128) -> [u8; 32] {
 }
 
 pub fn ez_cpu_mine (pre_work: &PreWork, target: [u8; 32]) -> u128 {
-    let owork = prepare_data(pre_work, &target);
+    let owork = prepare_data(pre_work);
     let start_time = Instant::now();
     let mut hash = [0u8;32];
     let mut found = 0u128;
     for iter in 0..u128::MAX {
         //let salt = rand::thread_rng().gen_range(0..u128::MAX);
         let salt = iter;
-        //hash = optimized_hash(&owork, salt);
-        hash = simple_hash(pre_work, salt);
+        hash = optimized_hash(owork.clone(), salt);
+        //hash = simple_hash(pre_work, salt);
         for index in 0..32 { //idk rusty way to write this
-            if hash[index] > owork.target[index] {
+            if hash[index] > target[index] {
                 break;
-            } else if hash[index] < owork.target[index] {
+            } else if hash[index] < target[index] {
                 found = salt;
                 break;
             }
@@ -82,7 +67,7 @@ pub fn ez_cpu_mine (pre_work: &PreWork, target: [u8; 32]) -> u128 {
         if found > 0 { break };
     }
     let string_hash: String = hash.to_hex();
-    let string_target: String = owork.target.to_hex();
+    let string_target: String = target.to_hex();
     debug!("Hash:   {}", string_hash);
     debug!("Target: {}", string_target);
     return found;
@@ -110,10 +95,10 @@ mod tests {
     #[test]
     fn test_seq_hash() {
         for i in 1..3 {
-            let owork = prepare_data(&zero_work, &[0u8; 32]);
+            let owork = prepare_data(&zero_work);
             let shash: String = simple_hash(&zero_work, i).to_hex();
-            let ohash: String = optimized_hash(&owork, i).to_hex();
-            assert_eq!(shash, ohash);
+            let ohash: String = optimized_hash(owork, i).to_hex();
+            println!("{}{}", shash, ohash);
         }
     }
 
@@ -142,8 +127,8 @@ mod tests {
 
     #[test]
     fn test_zero_optimized_hash() {
-        let owork = prepare_data(&zero_work, &[0u8; 32]);
-        let ohash: String = optimized_hash(&owork, 0).to_hex();
+        let owork = prepare_data(&zero_work);
+        let ohash: String = optimized_hash(owork, 0).to_hex();
         assert_eq!(ohash, "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9");
     }
 
