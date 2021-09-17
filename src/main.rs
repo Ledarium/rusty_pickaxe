@@ -3,12 +3,9 @@ use log::{debug, info};
 use std::fs::File;
 use std::io::Read;
 use std::str::FromStr;
+use rustc_hex::{FromHex, ToHex};
 
-use pretty_hex::*;
-
-use std::mem::transmute;
-
-use web3::contract::Contract;
+use web3::contract::{Contract, Options};
 use web3::types::{Address, Bytes, H160, H256, U256};
 
 use secp256k1::SecretKey;
@@ -93,13 +90,23 @@ async fn main() -> web3::Result<()> {
     let result = cpu::ez_cpu_mine(&mut owork);
     println!("Here is salt {:?}", result);
 
+    let string_hash: String = cpu::simple_hash(&pre_work, result).to_hex();
+    debug!("Hash(r): {}", string_hash);
+
     let tx = contract
-        .call("mine", (config.gem_type, result), config.address, web3::contract::Options::default())
+        .call("mine", (config.gem_type, result), config.address, Options::default())
         .await
         .unwrap();
-    debug!("{:?}",tx);
+    /*
     // Sign the tx (can be done offline)
     //let signed = web3.accounts().sign_transaction(tx, &prvk).await?;
+    //
+    let tx = contract.signed_call_with_confirmations(
+        "mine", (config.gem_type, result), web3::contract::Options::default(), 1, &prvk)
+        .await
+        .unwrap();
+    */
+    debug!("{:?}",tx);
 
     Ok(())
 }

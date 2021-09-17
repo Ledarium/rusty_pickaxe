@@ -1147,6 +1147,7 @@ dependencies = [
  "env_logger",
  "log",
  "pretty-hex",
+ "rand",
  "rustc-hex",
  "secp256k1",
  "serde",
