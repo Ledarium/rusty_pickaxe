@@ -43,3 +43,33 @@ pub fn vtoa<T, const N: usize>(v: Vec<T>) -> [T; N] {
     v.try_into()
         .unwrap_or_else(|v: Vec<T>| panic!("Expected a Vec of length {} but it was {}", N, v.len()))
 }
+
+#[cfg(test)]
+mod tests {
+    use bincode::Options;
+    use crate::utils::PreWork;
+    use web3::types::Address;
+    use std::str::FromStr;
+    use rustc_hex::ToHex;
+
+    #[test]
+    fn test_bin_data() {
+        let ex_work: PreWork = PreWork {
+            _pad1: [0u32; 7],
+            chain_id: 1u32,
+            entropy: [98u8; 32],
+            _pad2: [0u32; 7],
+            gem_id: 1u32,
+            gem_address: Address::from_str("0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0").unwrap().to_fixed_bytes(),
+            sender_address: Address::from_str("0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1").unwrap().to_fixed_bytes(),
+            _pad3: [0u32; 7],
+            eth_nonce: 20u32,
+        };
+        let bytes: String = bincode::options()
+            .with_fixint_encoding()
+            .allow_trailing_bytes()
+            .with_big_endian()
+            .serialize(&ex_work).unwrap().to_hex();
+        assert_eq!(bytes, "00000000000000000000000000000000000000000000000000000000000000016262626262626262626262626262626262626262626262626262626262626262ffcf8fdee72ac11b5c542428b35eef5769c409f090f8bf6a479f320ead074411a4b0e7944ea8c9c100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000014");
+    }
+}
