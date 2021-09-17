@@ -78,12 +78,6 @@ async fn main() -> web3::Result<()> {
         eth_nonce: eth_nonce.as_u32(),
     };
 
-    /*
-    info!("Here is some work for you: {:?}", owork.data.hex_dump());
-    let hash: String = optimized_hash(owork).to_hex();
-    info!("Here is hash {:?}", hash);
-    */
-
     println!("Diff is {:?}", gem_info.3);
     let result = cpu::ez_cpu_mine(&pre_work, div_up(u128::MAX, gem_info.3.as_u128()));
     println!("Here is salt {:?}", result);

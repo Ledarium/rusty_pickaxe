@@ -21,7 +21,7 @@ pub fn prepare_data(pre_work: &PreWork, target: u128) -> OptimizedWork {
     h.update(&bytes);
     h.update(&[0u8,16]); //salt high bits
     let mut ret = OptimizedWork {
-        keccak: h.clone(),
+        keccak: h,
         target: [0xFFu8; 32],
     };
     let target_bytes = target.to_be_bytes();
@@ -97,44 +97,38 @@ mod tests {
     use crate::utils::PreWork;
     use crate::cpu::{prepare_data, optimized_hash, simple_hash};
 
+    static zero_work: PreWork = PreWork {
+        _pad1: [0u32; 7],
+        chain_id: 0u32,
+        entropy: [0u8; 32],
+        _pad2: [0u32; 7],
+        gem_id: 0u32,
+        gem_address: [0u8; 20],
+        sender_address: [0u8; 20],
+        _pad3: [0u32; 7],
+        eth_nonce: 0u32,
+    };
+
     #[test]
     fn test_seq_hash() {
-        let pre_work = PreWork {
-            _pad1: [0u32; 7],
-            chain_id: 0u32,
-            entropy: [0u8; 32],
-            _pad2: [0u32; 7],
-            gem_id: 0u32,
-            gem_address: [0u8; 20],
-            sender_address: [0u8; 20],
-            _pad3: [0u32; 7],
-            eth_nonce: 0u32,
-        };
         for i in 1..3 {
-            let owork = prepare_data(&pre_work, 0);
-            let shash: String = simple_hash(&pre_work, i).to_hex();
+            let owork = prepare_data(&zero_work, 0);
+            let shash: String = simple_hash(&zero_work, i).to_hex();
             let ohash: String = optimized_hash(&owork, i).to_hex();
-            println!("shash {}\nohash {}",shash, ohash);
+            assert_eq!(shash, ohash);
         }
     }
 
     #[test]
-    fn test_optimized_hash() {
-        let pre_work = PreWork {
-            _pad1: [0u32; 7],
-            chain_id: 0u32,
-            entropy: [0u8; 32],
-            _pad2: [0u32; 7],
-            gem_id: 0u32,
-            gem_address: [0u8; 20],
-            sender_address: [0u8; 20],
-            _pad3: [0u32; 7],
-            eth_nonce: 0u32,
-        };
-        let owork = prepare_data(&pre_work, 0);
-        let shash: String = simple_hash(&pre_work, 0).to_hex();
-        let ohash: String = optimized_hash(&owork, 0).to_hex();
-        assert_eq!(shash, ohash);
+    fn test_zero_simple_hash() {
+        let shash: String = simple_hash(&zero_work, 0).to_hex();
+        assert_eq!(shash, "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9");
     }
 
+    #[test]
+    fn test_zero_optimized_hash() {
+        let owork = prepare_data(&zero_work, 0);
+        let ohash: String = optimized_hash(&owork, 0).to_hex();
+        assert_eq!(ohash, "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9");
+    }
 }
