@@ -5,6 +5,8 @@
 extern "C" {
 #include <stdint.h>
 #include <memory.h>
+#include <stdio.h>
+#include <stdlib.h>
 }
 
 #include <cuda_helper.h>
@@ -191,8 +193,9 @@ void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint32_t *resN
 }
 
 __host__
-void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t* resNonces, const uint2 highTarget)
+void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t* resNonces, uint32_t target_high, uint32_t target_low)
 {
+	uint2 highTarget = make_uint2(target_high, target_low);
 	uint32_t tpb;
 	dim3 grid;
 	if (device_sm[device_map[thr_id]] <= 500) {
@@ -209,103 +212,6 @@ void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, ui
 	cudaMemcpy(h_nonces[thr_id], d_nonces[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	memcpy(resNonces, h_nonces[thr_id], NBN*sizeof(uint32_t));
 }
-
-#if 0
-#if __CUDA_ARCH__ <= 500
-__global__ __launch_bounds__(TPB50, 2)
-#else
-__global__ __launch_bounds__(TPB52, 1)
-#endif
-void keccak256_gpu_hash_32(uint32_t threads, uint2* outputHash)
-{
-	uint32_t thread   = blockDim.x * blockIdx.x + threadIdx.x;
-	uint2 s[25], t[5], v, w, u[5];
-
-	if(thread < threads) {
-		#pragma unroll 25
-		for (int i = 0; i<25; i++) {
-			if (i<4) s[i] = __ldg(&outputHash[i*threads+thread]);
-			else     s[i] = make_uint2(0, 0);
-		}
-		s[4]  = keccak_round_constants[ 0];
-		s[16] = make_uint2(0, 0x80000000);
-		#if __CUDA_ARCH__ > 500
-			#pragma unroll
-		#else
-			#pragma unroll 4
-		#endif
-		for (uint32_t i = 0; i < 23; i++) {
-			/*theta*/
-			#pragma unroll 5
-			for(int j=0; j<5; j++) {
-				t[ j] = vectorize(xor5(devectorize(s[ j]),devectorize(s[j+5]),devectorize(s[j+10]),devectorize(s[j+15]),devectorize(s[j+20])));
-			}
-			/*theta*/
-			#pragma unroll 5
-			for(int j=0; j<5; j++) {
-				u[j] = ROL2(t[j], 1);
-			}
-			s[ 4] = xor3x(s[ 4], t[3], u[0]);s[ 9] = xor3x(s[ 9], t[3], u[0]);s[14] = xor3x(s[14], t[3], u[0]);s[19] = xor3x(s[19], t[3], u[0]);s[24] = xor3x(s[24], t[3], u[0]);
-			s[ 0] = xor3x(s[ 0], t[4], u[1]);s[ 5] = xor3x(s[ 5], t[4], u[1]);s[10] = xor3x(s[10], t[4], u[1]);s[15] = xor3x(s[15], t[4], u[1]);s[20] = xor3x(s[20], t[4], u[1]);
-			s[ 1] = xor3x(s[ 1], t[0], u[2]);s[ 6] = xor3x(s[ 6], t[0], u[2]);s[11] = xor3x(s[11], t[0], u[2]);s[16] = xor3x(s[16], t[0], u[2]);s[21] = xor3x(s[21], t[0], u[2]);
-			s[ 2] = xor3x(s[ 2], t[1], u[3]);s[ 7] = xor3x(s[ 7], t[1], u[3]);s[12] = xor3x(s[12], t[1], u[3]);s[17] = xor3x(s[17], t[1], u[3]);s[22] = xor3x(s[22], t[1], u[3]);
-			s[ 3] = xor3x(s[ 3], t[2], u[4]);s[ 8] = xor3x(s[ 8], t[2], u[4]);s[13] = xor3x(s[13], t[2], u[4]);s[18] = xor3x(s[18], t[2], u[4]);s[23] = xor3x(s[23], t[2], u[4]);
-			/*rho pi: b[..] = rotl(a[..] ^ d[...], ..)*/
-			v = s[ 1];
-			s[ 1] = ROL2(s[ 6],44); s[ 6] = ROL2(s[ 9],20); s[ 9] = ROL2(s[22],61); s[22] = ROL2(s[14],39);
-			s[14] = ROL2(s[20],18); s[20] = ROL2(s[ 2],62); s[ 2] = ROL2(s[12],43); s[12] = ROL2(s[13],25);
-			s[13] = ROL8(s[19]);    s[19] = ROR8(s[23]);    s[23] = ROL2(s[15],41); s[15] = ROL2(s[ 4],27);
-			s[ 4] = ROL2(s[24],14); s[24] = ROL2(s[21], 2); s[21] = ROL2(s[ 8],55); s[ 8] = ROL2(s[16],45);
-			s[16] = ROL2(s[ 5],36); s[ 5] = ROL2(s[ 3],28); s[ 3] = ROL2(s[18],21); s[18] = ROL2(s[17],15);
-			s[17] = ROL2(s[11],10); s[11] = ROL2(s[ 7], 6); s[ 7] = ROL2(s[10], 3); s[10] = ROL2(v, 1);
-			/* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */
-			#pragma unroll 5
-			for(int j=0; j<25; j+=5) {
-				v=s[j];w=s[j + 1]; s[j] = chi(v,w,s[j+2]); s[j+1] = chi(w,s[j+2],s[j+3]); s[j+2]=chi(s[j+2],s[j+3],s[j+4]); s[j+3]=chi(s[j+3],s[j+4],v); s[j+4]=chi(s[j+4],v,w);
-			}
-			/* iota: a[0,0] ^= round constant */
-			s[ 0] ^=keccak_round_constants[ i];
-		}
-		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
-		#pragma unroll 5
-		for(int j=0;j<5;j++) {
-			t[ j] = xor3x(xor3x(s[j+0],s[j+5],s[j+10]), s[j+15], s[j+20]);
-		}
-		/* theta: d[i] = c[i+4] ^ rotl(c[i+1],1) */
-		#pragma unroll 5
-		for(int j=0;j<5;j++) {
-			u[j] = ROL2(t[j],1);
-		}
-		/* thetarho pi: b[..] = rotl(a[..] ^ d[...], ..) //There's no need to perform theta and -store- the result since it's unique for each a[..]*/
-		s[ 4] = xor3x(s[24], t[3], u[0]);
-		s[ 0] = xor3x(s[ 0], t[4], u[1]);
-		s[ 1] = xor3x(s[ 6], t[0], u[2]);
-		s[ 2] = xor3x(s[12], t[1], u[3]);
-		s[ 3] = xor3x(s[18], t[2], u[4]);
-		s[ 1] = ROR2(s[ 1],20);
-		s[ 2] = ROR2(s[ 2],21);
-		s[ 3] = ROL2(s[ 3],21);
-		s[ 4] = ROL2(s[ 4],14);
-
-		/* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */
-		outputHash[0*threads+thread] = chi(s[ 0],s[ 1],s[ 2]) ^ keccak_round_constants[23];
-		outputHash[1*threads+thread] = chi(s[ 1],s[ 2],s[ 3]);
-		outputHash[2*threads+thread] = chi(s[ 2],s[ 3],s[ 4]);
-		outputHash[3*threads+thread] = chi(s[ 3],s[ 4],s[ 0]);
-	}
-}
-
-__host__
-void keccak256_cpu_hash_32(const int thr_id,const uint32_t threads, uint2* d_hash)
-{
-	uint32_t tpb = TPB52;
-	if (device_sm[device_map[thr_id]] == 500) tpb = TPB50;
-	const dim3 grid((threads + tpb-1)/tpb);
-	const dim3 block(tpb);
-
-	keccak256_gpu_hash_32 <<<grid, block>>> (threads, d_hash);
-}
-#endif
 
 __host__
 void keccak256_setBlock_80(uint64_t *endiandata)
@@ -361,7 +267,7 @@ void keccak256_cpu_init(int thr_id)
 	//CUDA_SAFE_CALL(cudaMallocHost(&h_nonces[thr_id], NBN*sizeof(uint32_t)));
 	h_nonces[thr_id] = (uint32_t*) malloc(NBN * sizeof(uint32_t));
 	if(h_nonces[thr_id] == NULL) {
-		gpulog(LOG_ERR,thr_id,"Host memory allocation failed");
+		//gpulog(LOG_ERR,thr_id,"Host memory allocation failed");
 		exit(EXIT_FAILURE);
 	}
 }

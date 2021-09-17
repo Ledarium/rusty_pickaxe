@@ -12,6 +12,7 @@ use secp256k1::SecretKey;
 use bigint::uint::U256 as u256;
 
 
+mod cuda;
 mod cpu;
 mod utils;
 
