@@ -96,6 +96,8 @@ mod tests {
     use rustc_hex::ToHex;
     use crate::utils::PreWork;
     use crate::cpu::{prepare_data, optimized_hash, simple_hash};
+    use web3::types::Address;
+    use std::str::FromStr;
 
     static zero_work: PreWork = PreWork {
         _pad1: [0u32; 7],
@@ -108,7 +110,6 @@ mod tests {
         _pad3: [0u32; 7],
         eth_nonce: 0u32,
     };
-
     #[test]
     fn test_seq_hash() {
         for i in 1..3 {
@@ -123,6 +124,23 @@ mod tests {
     fn test_zero_simple_hash() {
         let shash: String = simple_hash(&zero_work, 0).to_hex();
         assert_eq!(shash, "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9");
+    }
+
+    #[test]
+    fn test_example_simple_hash() {
+        let ex_work: PreWork = PreWork {
+            _pad1: [0u32; 7],
+            chain_id: 1u32,
+            entropy: [98u8; 32],
+            _pad2: [0u32; 7],
+            gem_id: 1u32,
+            gem_address: Address::from_str("0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0").unwrap().to_fixed_bytes(),
+            sender_address: Address::from_str("0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1").unwrap().to_fixed_bytes(),
+            _pad3: [0u32; 7],
+            eth_nonce: 20u32,
+        };
+        let shash: String = simple_hash(&ex_work, 2).to_hex();
+        assert_eq!(shash, "a569d9eb26b08c52dd21a023c8310550767a47c8a33035946ac25d404d7717ab");
     }
 
     #[test]
