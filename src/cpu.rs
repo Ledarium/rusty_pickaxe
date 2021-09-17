@@ -21,7 +21,7 @@ pub fn prepare_data(pre_work: &PreWork, target: u128) -> OptimizedWork {
     h.update(&bytes);
     h.update(&[0u8,16]); //salt high bits
     let mut ret = OptimizedWork {
-        keccak: h,
+        keccak: h.clone(),
         target: [0xFFu8; 32],
     };
     let target_bytes = target.to_be_bytes();
@@ -65,7 +65,10 @@ pub fn ez_cpu_mine (pre_work: &PreWork, target: u128) -> u128 {
     for iter in 0..u128::MAX {
         //let salt = rand::thread_rng().gen_range(0..u128::MAX);
         let salt = iter;
+        /*
         hash = optimized_hash(&owork, salt);
+        */
+        hash = simple_hash(pre_work, salt);
         for index in 0..32 { //idk rusty way to write this
             if hash[index] > owork.target[index] {
                 break;
@@ -74,12 +77,12 @@ pub fn ez_cpu_mine (pre_work: &PreWork, target: u128) -> u128 {
                 break;
             }
         }
-        if found > 0 { break };
         if iter % 500000 == 1 {
             debug!("Trying salt {}", salt);
             let elapsed = start_time.elapsed();
             println!("Elapsed time: {:.2?}, hashrate = {}", elapsed, iter as f32/elapsed.as_secs_f32());
         }
+        if found > 0 { break };
     }
     let string_hash: String = hash.to_hex();
     let string_target: String = owork.target.to_hex();
