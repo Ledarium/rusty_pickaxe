@@ -288,14 +288,19 @@ void keccak256_cpu_free(int thr_id)
 }
 
 __host__
-int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
-{
+uint32_t scanhash_keccak256(
+        int thr_id,
+        uint32_t* pdata,
+        uint32_t* ptarget,
+        uint32_t* nonces,
+        uint32_t max_nonce,
+        uint64_t* hashes_done,
+        bool* restart
+) {
 	uint32_t endiandata[20];
-	uint32_t *pdata = work->data;
-	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	const int dev_id = device_map[thr_id];
-	uint32_t throughput;
+	uint32_t throughput = UINT32_MAX/2;
 	uint32_t intensity = 23;
     /*
     if (strstr(device_name[dev_id], "GTX 1070")) intensity = 25;
@@ -308,6 +313,7 @@ int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_nonce, unsign
 	if (opt_benchmark)
 		ptarget[7] = 0x000f;
     */
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (!init[thr_id])
 	{
@@ -327,51 +333,21 @@ int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_nonce, unsign
 	}
 
 	for (int k=0; k < 19; k++) {
-		endiandata[i] = pdata[k];
+		endiandata[k] = pdata[k];
 	}
 
 	const uint2 highTarget = make_uint2(ptarget[6], ptarget[7]);
+
     keccak256_setBlock_80((uint64_t*)endiandata);
     keccak256_setOutput(thr_id);
 
 	do {
-		int order = 0;
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-        keccak256_cpu_hash_80(thr_id, throughput, pdata[19], work->nonces, highTarget);
-		if (work->nonces[0] != UINT32_MAX)
+        keccak256_cpu_hash_80(thr_id, throughput, pdata[19], nonces, highTarget);
+		if (nonces[0] != UINT32_MAX)
 		{
-			const uint32_t Htarg = ptarget[7];
-			//uint32_t _ALIGN(64) vhash[8];
-			uint32_t vhash[8];
-
-			endiandata[19] = work->nonces[0];
-			keccak256_hash(vhash, endiandata);
-
-			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
-				work->valid_nonces = 1;
-				work_set_target_ratio(work, vhash);
-				if (!use_compat_kernels[thr_id] && work->nonces[1] != UINT32_MAX) {
-					be32enc(&endiandata[19], work->nonces[1]);
-					keccak256_hash(vhash, endiandata);
-					if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
-						work->valid_nonces++;
-						bn_set_target_ratio(work, vhash, 1);
-					}
-					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
-				} else {
-					pdata[19] = work->nonces[0] + 1;
-				}
-				return work->valid_nonces;
-			}
-			else if (vhash[7] > Htarg) {
-				gpu_increment_reject(thr_id);
-				if (!opt_quiet)
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
-				pdata[19] = work->nonces[0] + 1;
-				//keccak256_setOutput(thr_id);
-				continue;
-			}
+            return nonces[0];
 		}
 
 		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
@@ -381,7 +357,7 @@ int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_nonce, unsign
 
 		pdata[19] += throughput;
 
-	} while (!work_restart[thr_id].restart);
+	} while (!restart);
 
 	*hashes_done = pdata[19] - first_nonce;
 	return 0;
