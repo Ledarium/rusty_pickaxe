@@ -9,6 +9,7 @@ use web3::contract::{Contract, Options};
 use web3::types::{Address, Bytes, H160, H256, U256};
 
 use secp256k1::SecretKey;
+use bigint::uint::U256 as u256;
 
 
 mod cpu;
@@ -79,7 +80,10 @@ async fn main() -> web3::Result<()> {
     };
 
     println!("Diff is {:?}", gem_info.3);
-    let result = cpu::ez_cpu_mine(&pre_work, div_up(u128::MAX, gem_info.3.as_u128()));
+    let target = u256::max_value() / u256::from(gem_info.3.as_u32());
+    let mut target_bytes = [0u8; 32];
+    target.to_big_endian(&mut target_bytes);
+    let result = cpu::ez_cpu_mine(&pre_work, target_bytes);
     println!("Here is salt {:?}", result);
 
     let string_hash: String = cpu::simple_hash(&pre_work, result).to_hex();

@@ -11,7 +11,7 @@ pub struct OptimizedWork {
     pub target: [u8; 32],
 }
 
-pub fn prepare_data(pre_work: &PreWork, target: u128) -> OptimizedWork {
+pub fn prepare_data(pre_work: &PreWork, target: &[u8; 32]) -> OptimizedWork {
     let mut h = Keccak::v256();
     let bytes = bincode::options()
         .with_fixint_encoding()
@@ -20,13 +20,14 @@ pub fn prepare_data(pre_work: &PreWork, target: u128) -> OptimizedWork {
         .serialize(&pre_work).unwrap();
     h.update(&bytes);
     h.update(&[0u8,16]); //salt high bits
+    let string: String = bytes.to_hex();
+    debug!("hex data: {}", string);
     let mut ret = OptimizedWork {
         keccak: h,
         target: [0xFFu8; 32],
     };
-    let target_bytes = target.to_be_bytes();
-    for i in 0..16 {
-        ret.target[i] = target_bytes[i]
+    for i in 0..32 {
+        ret.target[i] = target[i]
     }
     return ret;
 }
@@ -54,8 +55,8 @@ pub fn simple_hash(pre_work: &PreWork, salt: u128) -> [u8; 32] {
     return res;
 }
 
-pub fn ez_cpu_mine (pre_work: &PreWork, target: u128) -> u128 {
-    let owork = prepare_data(pre_work, target);
+pub fn ez_cpu_mine (pre_work: &PreWork, target: [u8; 32]) -> u128 {
+    let owork = prepare_data(pre_work, &target);
     info!("Starting mining, target {:?}", u128::from_be_bytes(owork.target[16..32].try_into().unwrap()));
     let start_time = Instant::now();
     let mut hash = [0u8;32];
@@ -145,4 +146,19 @@ mod tests {
         let ohash: String = optimized_hash(&owork, 0).to_hex();
         assert_eq!(ohash, "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9");
     }
+
+    /*
+    #[test]
+    fn test_keccak_clone() {
+        let mut h = Keccak::v256();
+        let bytes = bincode::options()
+            .with_fixint_encoding()
+            .allow_trailing_bytes()
+            .with_big_endian()
+            .serialize(&pre_work).unwrap();
+        h.update(&bytes);
+        h.update(&[0u8,16]); //salt high bits
+        let string: String = bytes.to_hex();
+    }
+    */
 }
