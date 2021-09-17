@@ -84,10 +84,8 @@ async fn main() -> web3::Result<()> {
     info!("Here is hash {:?}", hash);
     */
 
-    let mut owork = cpu::prepare_data(&pre_work, div_up(u128::MAX, gem_info.3.as_u128()));
-    
     println!("Diff is {:?}", gem_info.3);
-    let result = cpu::ez_cpu_mine(&mut owork);
+    let result = cpu::ez_cpu_mine(&pre_work, div_up(u128::MAX, gem_info.3.as_u128()));
     println!("Here is salt {:?}", result);
 
     let string_hash: String = cpu::simple_hash(&pre_work, result).to_hex();

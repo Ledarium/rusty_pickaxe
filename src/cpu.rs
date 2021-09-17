@@ -33,7 +33,9 @@ pub fn prepare_data(pre_work: &PreWork, target: u128) -> OptimizedWork {
 
 pub fn optimized_hash(work: &OptimizedWork, salt: u128) -> [u8; 32] {
     let mut h = work.keccak.clone();
+    //debug!("Before {:?}", h.state.buffer);
     h.update(&salt.to_be_bytes());
+    //debug!("After  {:?}", h.state.buffer);
     let mut res = [0u8; 32];
     h.finalize(&mut res);
     return res;
@@ -54,7 +56,8 @@ pub fn simple_hash(pre_work: &PreWork, salt: u128) -> [u8; 32] {
     return res;
 }
 
-pub fn ez_cpu_mine (owork: &OptimizedWork) -> u128 {
+pub fn ez_cpu_mine (pre_work: &PreWork, target: u128) -> u128 {
+    let owork = prepare_data(pre_work, target);
     info!("Starting mining, target {:?}", u128::from_be_bytes(owork.target[16..32].try_into().unwrap()));
     let start_time = Instant::now();
     let mut hash = [0u8;32];
@@ -83,4 +86,52 @@ pub fn ez_cpu_mine (owork: &OptimizedWork) -> u128 {
     debug!("Hash:   {}", string_hash);
     debug!("Target: {}", string_target);
     return found;
+}
+
+#[cfg(test)]
+mod tests {
+    use rustc_hex::ToHex;
+    use crate::utils::PreWork;
+    use crate::cpu::{prepare_data, optimized_hash, simple_hash};
+
+    #[test]
+    fn test_seq_hash() {
+        let pre_work = PreWork {
+            _pad1: [0u32; 7],
+            chain_id: 0u32,
+            entropy: [0u8; 32],
+            _pad2: [0u32; 7],
+            gem_id: 0u32,
+            gem_address: [0u8; 20],
+            sender_address: [0u8; 20],
+            _pad3: [0u32; 7],
+            eth_nonce: 0u32,
+        };
+        for i in 1..3 {
+            let owork = prepare_data(&pre_work, 0);
+            let shash: String = simple_hash(&pre_work, i).to_hex();
+            let ohash: String = optimized_hash(&owork, i).to_hex();
+            println!("shash {}\nohash {}",shash, ohash);
+        }
+    }
+
+    #[test]
+    fn test_optimized_hash() {
+        let pre_work = PreWork {
+            _pad1: [0u32; 7],
+            chain_id: 0u32,
+            entropy: [0u8; 32],
+            _pad2: [0u32; 7],
+            gem_id: 0u32,
+            gem_address: [0u8; 20],
+            sender_address: [0u8; 20],
+            _pad3: [0u32; 7],
+            eth_nonce: 0u32,
+        };
+        let owork = prepare_data(&pre_work, 0);
+        let shash: String = simple_hash(&pre_work, 0).to_hex();
+        let ohash: String = optimized_hash(&owork, 0).to_hex();
+        assert_eq!(shash, ohash);
+    }
+
 }
