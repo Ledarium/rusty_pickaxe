@@ -1161,7 +1161,9 @@ version = "0.0.1"
 dependencies = [
  "bigint",
  "bincode",
+ "cc",
  "env_logger",
+ "libc",
  "log",
  "pretty-hex",
  "rand",
