@@ -1,7 +1,9 @@
 [package]
 name = "rusty_pickaxe"
 version = "0.0.1"
+authors = ["Ledarium tg@amazing_booba"]
 edition = "2018"
+links = "cudart"
 
 [dependencies]
 rustc-hex = "*"
