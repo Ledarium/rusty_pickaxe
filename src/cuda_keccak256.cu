@@ -78,7 +78,7 @@ __global__ __launch_bounds__(TPB50, 2)
 #else
 __global__ __launch_bounds__(TPB52, 1)
 #endif
-void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint32_t *resNounce, const uint2 highTarget)
+void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint32_t *resNounce, uint2 Target)
 {
 	uint32_t thread = blockDim.x * blockIdx.x + threadIdx.x;
 	uint2 s[25], t[5], v, w, u[5];
@@ -186,9 +186,9 @@ void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint32_t *resN
 		/* theta: d[i] = c[i+4] ^ rotl(c[i+1],1) */
 		s[24] = ROL2(s[24],14);
 		s[18] = ROL2(s[18],21);
-		if (devectorize(chi(s[18],s[24],s[ 0])) <= devectorize(highTarget)) {
-//		if(chi(s[18].x,s[24].x,s[0].x)<=highTarget.x) {
-//			if(chi(s[18].y,s[24].y,s[0].y)<=highTarget.y) {
+		if (devectorize(chi(s[18],s[24],s[ 0])) <= devectorize(Target)) {
+//		if(chi(s[18].x,s[24].x,s[0].x)<=Target.x) {
+//			if(chi(s[18].y,s[24].y,s[0].y)<=Target.y) {
 				const uint32_t tmp = atomicExch(&resNounce[0], nounce);
 				if (tmp != UINT32_MAX)
 					resNounce[1] = tmp;
@@ -198,8 +198,7 @@ void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint32_t *resN
 	}
 }
 
-__host__
-void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t* resNonces, const uint2 highTarget)
+extern "C" __host__ void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t* resNonces)
 {
 	uint32_t tpb;
 	dim3 grid;
@@ -339,18 +338,19 @@ extern "C" int prepare_mining(uint32_t thr_id, uint32_t throughput, uint64_t* da
 		init[thr_id] = true;
 	}
     fprintf(log_fd, "test2\n");
-	highTarget = make_uint2(targetH, targetL);
+	highTarget = make_uint2(targetL, targetH);
     keccak256_setBlock_80((uint64_t*)data);
     keccak256_setOutput(thr_id);
     fprintf(log_fd, "test3\n");
     return 0;
 }
 
+/*
 extern "C" uint32_t mining_iter(uint32_t thr_id, uint32_t throughput, uint32_t first_nonce) {
-    //*hashes_done = pdata[19] - first_nonce + throughput;
+    *hashes_done = pdata[19] - first_nonce + throughput;
     uint32_t nonces[2] = {UINT32_MAX, UINT32_MAX};
     fprintf(log_fd, "lol");
-    keccak256_cpu_hash_80(thr_id, throughput, first_nonce, nonces, highTarget);
+    keccak256_cpu_hash_80(thr_id, throughput, first_nonce, nonces);
     fprintf(log_fd, "test4\n");
     if (nonces[0] != UINT32_MAX)
     {
@@ -362,6 +362,7 @@ extern "C" uint32_t mining_iter(uint32_t thr_id, uint32_t throughput, uint32_t f
     }
     return 0;
 }
+*/
 
 // cleanup
 extern "C" void free_keccak256(int thr_id)

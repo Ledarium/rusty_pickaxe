@@ -93,11 +93,17 @@ async fn main() -> web3::Result<()> {
         if !gpu {
             let result = cpu::ez_cpu_mine(&pre_work, target_bytes);
             println!("Here is CPU salt {:?}", result);
+            let string_hash: String = cpu::simple_hash(&pre_work, result.into()).to_hex();
+            let string_target: String = target_bytes.to_hex();
+            debug!("Hash:   {}", string_hash);
+            debug!("Target: {}", string_target);
         } else {
             let result = cuda::mine_cuda(&pre_work, target_bytes);
             println!("Here is CUDA salt {:?}", result);
             let string_hash: String = cpu::simple_hash(&pre_work, result.into()).to_hex();
-            debug!("Hash(r): {}", string_hash);
+            let string_target: String = target_bytes.to_hex();
+            debug!("Hash:   {}", string_hash);
+            debug!("Target: {}", string_target);
         }
 
         /*
