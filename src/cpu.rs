@@ -2,17 +2,7 @@ use tiny_keccak::{Hasher, Keccak};
 use log::debug;
 use std::time::Instant;
 use rustc_hex::ToHex;
-use crate::utils::{PreWork, serialize_work};
-
-pub fn prepare_data(pre_work: &PreWork) -> Keccak {
-    let mut h = Keccak::v256();
-    let bytes = serialize_work(pre_work);
-    h.update(&bytes);
-    h.update(&[0u8; 16]); //salt high bits
-    let string: String = bytes.to_hex();
-    debug!("hex data: {}", string);
-    return h;
-}
+use crate::utils::{PreWork, serialize_work, prepare_data};
 
 pub fn optimized_hash(mut h: Keccak, salt: u128) -> [u8; 32] {
     h.update(&salt.to_be_bytes());
@@ -67,8 +57,8 @@ pub fn ez_cpu_mine (pre_work: &PreWork, target: [u8; 32]) -> u128 {
 #[cfg(test)]
 mod tests {
     use rustc_hex::ToHex;
-    use crate::utils::{PreWork, serialize_work};
-    use crate::cpu::{prepare_data, optimized_hash, simple_hash};
+    use crate::utils::{PreWork, serialize_work, prepare_data};
+    use crate::cpu::{optimized_hash, simple_hash};
     use web3::types::Address;
     use std::str::FromStr;
 

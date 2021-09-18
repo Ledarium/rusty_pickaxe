@@ -3,6 +3,7 @@
  */
 
 extern "C" {
+#include <fcntl.h>
 #include <stdint.h>
 #include <memory.h>
 #include <stdio.h>
@@ -17,10 +18,13 @@ extern "C" {
 #define NPT 2
 #define NBN 2
 
+short device_map[MAX_GPUS] = { 0 };
 static bool init[MAX_GPUS] = { 0 };
 
 static uint32_t *d_nonces[MAX_GPUS];
 static uint32_t *h_nonces[MAX_GPUS];
+uint2 highTarget;
+FILE* log_fd;
 
 __constant__ uint2 c_message48[6];
 __constant__ uint2 c_mid[17];
@@ -199,13 +203,15 @@ void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, ui
 {
 	uint32_t tpb;
 	dim3 grid;
+    /*
 	if (device_sm[device_map[thr_id]] <= 500) {
 		tpb = TPB50;
 		grid.x = (threads + tpb-1)/tpb;
 	} else {
+    */
 		tpb = TPB52;
 		grid.x = (threads + (NPT*tpb)-1)/(NPT*tpb);
-	}
+	//}
 	const dim3 block(tpb);
 
 	keccak256_gpu_hash_80<<<grid, block>>>(threads, startNonce, d_nonces[thr_id], highTarget);
@@ -287,34 +293,35 @@ void keccak256_cpu_free(int thr_id)
 	free(h_nonces[thr_id]);
 }
 
+/* Function to get the compiled Shader Model version */
+int cuda_arch[MAX_GPUS] = { 0 };
+__global__ void nvcc_get_arch(int *d_version)
+{
+	*d_version = 0;
+#ifdef __CUDA_ARCH__
+	*d_version = __CUDA_ARCH__;
+#endif
+}
+
 __host__
-uint32_t scanhash_keccak256(
-        int thr_id,
-        uint32_t* pdata,
-        uint32_t* ptarget,
-        uint32_t* nonces,
-        uint32_t max_nonce,
-        uint64_t* hashes_done,
-        bool* restart
-) {
-	uint32_t endiandata[20];
-	const uint32_t first_nonce = pdata[19];
-	const int dev_id = device_map[thr_id];
-	uint32_t throughput = UINT32_MAX/2;
-	uint32_t intensity = 23;
-    /*
-    if (strstr(device_name[dev_id], "GTX 1070")) intensity = 25;
-    if (strstr(device_name[dev_id], "GTX 1080")) intensity = 26;
-    if (strstr(device_name[dev_id], "RTX 3070")) intensity = 31;
+int cuda_get_arch(int thr_id)
+{
+	int *d_version;
+	int dev_id = device_map[thr_id];
+	if (cuda_arch[dev_id] == 0) {
+		// only do it once...
+		cudaMalloc(&d_version, sizeof(int));
+		nvcc_get_arch <<< 1, 1 >>> (d_version);
+		cudaMemcpy(&cuda_arch[dev_id], d_version, sizeof(int), cudaMemcpyDeviceToHost);
+		cudaFree(d_version);
+	}
+	return cuda_arch[dev_id];
+}
 
-	throughput = cuda_default_throughput(thr_id, 1U << intensity);
-	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
-
-	if (opt_benchmark)
-		ptarget[7] = 0x000f;
-    */
-	throughput = min(throughput, max_nonce - first_nonce);
-
+extern "C" int prepare_mining(uint32_t thr_id, uint32_t throughput, uint64_t* data, uint32_t targetH, uint32_t targetL) {
+    log_fd = fopen("gpu.log", "w");
+    fprintf(log_fd, "test\n");
+	const int dev_id = 0; //device_map[thr_id];
 	if (!init[thr_id])
 	{
 		cudaSetDevice(dev_id);
@@ -331,36 +338,29 @@ uint32_t scanhash_keccak256(
 
 		init[thr_id] = true;
 	}
-
-	for (int k=0; k < 19; k++) {
-		endiandata[k] = pdata[k];
-	}
-
-	const uint2 highTarget = make_uint2(ptarget[6], ptarget[7]);
-
-    keccak256_setBlock_80((uint64_t*)endiandata);
+    fprintf(log_fd, "test2\n");
+	highTarget = make_uint2(targetH, targetL);
+    keccak256_setBlock_80((uint64_t*)data);
     keccak256_setOutput(thr_id);
+    fprintf(log_fd, "test3\n");
+    return 0;
+}
 
-	do {
-		*hashes_done = pdata[19] - first_nonce + throughput;
-
-        keccak256_cpu_hash_80(thr_id, throughput, pdata[19], nonces, highTarget);
-		if (nonces[0] != UINT32_MAX)
-		{
-            return nonces[0];
-		}
-
-		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
-			pdata[19] = max_nonce;
-			break;
-		}
-
-		pdata[19] += throughput;
-
-	} while (!restart);
-
-	*hashes_done = pdata[19] - first_nonce;
-	return 0;
+extern "C" uint32_t mining_iter(uint32_t thr_id, uint32_t throughput, uint32_t first_nonce) {
+    //*hashes_done = pdata[19] - first_nonce + throughput;
+    uint32_t nonces[2] = {UINT32_MAX, UINT32_MAX};
+    fprintf(log_fd, "lol");
+    keccak256_cpu_hash_80(thr_id, throughput, first_nonce, nonces, highTarget);
+    fprintf(log_fd, "test4\n");
+    if (nonces[0] != UINT32_MAX)
+    {
+        return nonces[0];
+    }
+    if (nonces[1] != UINT32_MAX)
+    {
+        return nonces[1];
+    }
+    return 0;
 }
 
 // cleanup

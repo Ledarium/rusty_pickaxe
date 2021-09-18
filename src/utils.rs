@@ -1,7 +1,16 @@
+use tiny_keccak::{Hasher, Keccak};
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use web3::types::Address;
 use bincode::Options;
+
+pub fn prepare_data(pre_work: &PreWork) -> Keccak {
+    let mut h = Keccak::v256();
+    let bytes = serialize_work(pre_work);
+    h.update(&bytes);
+    h.update(&[0u8; 16]); //salt high bits
+    return h;
+}
 
 pub fn serialize_work(pre_work: &PreWork) -> Vec<u8> {
     return bincode::options()

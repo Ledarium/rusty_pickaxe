@@ -11,7 +11,6 @@ use web3::types::{Address, Bytes, H160, H256, U256};
 use secp256k1::SecretKey;
 use bigint::uint::U256 as u256;
 
-
 mod cuda;
 mod cpu;
 mod utils;
@@ -68,6 +67,7 @@ async fn main() -> web3::Result<()> {
 
     loop {
         //let eth_nonce = web3.eth().transaction_count(config.address, None).await.unwrap();
+        let gpu = true;
         let tx = contract.query("nonce", (config.address,), config.address, web3::contract::Options::default(), None);
         let eth_nonce_tx: (U256, ) = tx.await.unwrap();
         let eth_nonce = eth_nonce_tx.0.as_u32();
@@ -90,11 +90,15 @@ async fn main() -> web3::Result<()> {
         info!("Starting mining, target {:?}", target);
         let mut target_bytes = [0u8; 32];
         target.to_big_endian(&mut target_bytes);
-        let result = cpu::ez_cpu_mine(&pre_work, target_bytes);
-        println!("Here is salt {:?}", result);
-
-        let string_hash: String = cpu::simple_hash(&pre_work, result).to_hex();
-        debug!("Hash(r): {}", string_hash);
+        if !gpu {
+            let result = cpu::ez_cpu_mine(&pre_work, target_bytes);
+            println!("Here is CPU salt {:?}", result);
+        } else {
+            let result = cuda::mine_cuda(&pre_work, target_bytes);
+            println!("Here is CUDA salt {:?}", result);
+            let string_hash: String = cpu::simple_hash(&pre_work, result.into()).to_hex();
+            debug!("Hash(r): {}", string_hash);
+        }
 
         /*
         let tx = contract
@@ -104,13 +108,13 @@ async fn main() -> web3::Result<()> {
         // Sign the tx (can be done offline)
         //let signed = web3.accounts().sign_transaction(tx, &prvk).await?;
         //
-        */
         let tx = contract.signed_call_with_confirmations(
             "mine", (config.gem_type, result), web3::contract::Options::default(), 1, &prvk)
             .await
             .unwrap();
         info!("{:?}",tx);
         if !config.r#loop { break; }
+        */
     };
 
 }

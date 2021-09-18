@@ -11,8 +11,8 @@ fn main() {
     .include("./src")
     .files(&["./src/cuda_keccak256.cu"])
     .compile("libcuda_keccak256.a");
-  println!("cargo:rustc-link-search=native={}", CUDA_PATH);
-  println!("cargo:rustc-link-search={}", CUDA_PATH);
+  println!("cargo:rustc-link-search=all={}", CUDA_PATH);
+  println!("cargo:rustc-link-search=all={}", "./src");
   println!("cargo:rustc-env=LD_LIBRARY_PATH={}", CUDA_PATH);
   println!("cargo:rustc-link-lib=dylib=cudart");
 }
