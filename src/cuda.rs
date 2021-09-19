@@ -4,6 +4,7 @@ use crate::utils::{PreWork, serialize_work, prepare_data};
 
 #[link(name = "cuda_keccak256", kind = "static")]
 extern "C" {
+    fn gpu_init();
     fn keccak256_setBlock_80(endiandata: *mut u64);
     fn prepare_mining(thr_id: u32, throughput: u32, data: *const u64, targetH: u32, targetL: u32) -> u32;
     fn keccak256_cpu_hash_80(thr_id: u32, throughput: u32, first_nonce: u32, nonces: *mut u32);
@@ -14,7 +15,8 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u32 {
     let mut work = serialize_work(&pre_work);
     let throughput = 4096*100;
     let thr_id = 0;
-    let keccak = prepare_data(&pre_work);
+    unsafe {gpu_init()};
+
     let target_high = u32::from_be_bytes(target[0..4].try_into().expect("bad"));
     let target_low = u32::from_be_bytes(target[4..8].try_into().expect("bad"));
     let prepare_rc = unsafe { prepare_mining(

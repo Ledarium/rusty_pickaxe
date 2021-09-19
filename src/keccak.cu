@@ -22,14 +22,16 @@ int max_threads_per_mp;
 #define MSG_SIZE 16
 #define THREADS_PER_BLOCK 512
 
-
-int num_messages;
 const int digest_size = 256;
 const int digest_size_bytes = digest_size / 8;
-const size_t str_length = 7;	//change for different sizes
 
-uint64_t pre_state[25];    
-uint64_t state[25];    
+__host__ uint64_t h_pre_state[25];    
+__device__ uint64_t d_pre_state[25];    
+
+__device__ uint64_t state[25];    
+
+__host__ uint32_t h_output;
+__device__ uint32_t d_output;    
 
 // cudaEvent_t start, stop;
 #define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
@@ -307,76 +309,53 @@ __device__ void keccak256(){
     }
 }
 
-__device__ uint32_t set_block(const uint8_t *bytes) {
+__host__ uint32_t h_set_block(const uint8_t *bytes) {
     //get 17 bytes of data, keccakF them
-    uint8_t temp[144];
     int rsize = 136;
-    int rsize_byte = 17;
+    int rsize_byte = rsize/8;
     
-    memset(state, 0, sizeof(state));
+    memset(h_pre_state, 0, sizeof(pre_state));
 
     for (int i = 0; i < rsize_byte; i++) {
-        pre_state[i] ^= ((uint64_t *) bytes)[i];
+        h_pre_state[i] ^= ((uint64_t *) bytes)[i];
     }
-    keccak256(pre_state);
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(h_pre_state, d_pre_state, 17*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
+    //keccak256(d_pre_state);
 }
 
-__global__ void mine(const char *message, int message_len) {
+__global__ void g_mine(const uint8_t *message, uint32_t start_nonce) {
     // get last 64 bytes, pad them and keccakF
+    // nonce[32] 
+    // salt[32] 
+    uint8_t temp[144];
+    int rsize = 136;
+    int rsize_byte = rsize/8;
+    int message_len = 64;
+
+    memcpy(state, d_pre_state, 25);
+    keccak256();
 
     // last block and padding
     memcpy(temp, message, message_len);
-    temp[message_len++] = 0x01;
-    memset(temp + message_len, 0, rsize - message_len);
-    temp[rsize - 1] |= 0x80;
 
-    for (int i = 0; i < rsize_byte; i++) {
-        state[i] ^= ((uint64_t *) temp)[i];
-	}
+    uint32_t* saltH = ((uint32_t *) temp)[7];
+    uint32_t* saltL = ((uint32_t *) temp)[8];
 
-    keccak256(state);
-    memcpy(output, state, output_len);
-	const int str_len = 6;
-	const int output_len = 32;
 	int tid = threadIdx.x + (blockIdx.x * blockDim.x);
 	int num_threads = blockDim.x * gridDim.x;
 	
-	for (; tid < num_messages; tid += num_threads)
-	{
-		keccak(&messages[tid * str_len], str_len, &output[tid * output_len], output_len);
-	}
-}
-
-__device__ void keccak(const char *message, int message_len, unsigned char *output, int output_len){
-    uint64_t state[25];    
-    uint8_t temp[144];
-    int rsize = 136;
-    int rsize_byte = 17;
-    
-    memset(state, 0, sizeof(state));
-
-    for ( ; message_len >= rsize; message_len -= rsize, message += rsize) {
-        for (int i = 0; i < rsize_byte; i++) {
-            state[i] ^= ((uint64_t *) message)[i];
-		}
-        keccak256(state);
-    }
-    
-    // last block and padding
-    memcpy(temp, message, message_len);
-    temp[message_len++] = 0x01;
+    saltL[0] = start_nonce+tid;
+    temp[message_len] = 0x01;
     memset(temp + message_len, 0, rsize - message_len);
     temp[rsize - 1] |= 0x80;
 
     for (int i = 0; i < rsize_byte; i++) {
         state[i] ^= ((uint64_t *) temp)[i];
-	}
-
-    keccak256(state);
-    memcpy(output, state, output_len);
+    }
+    keccak256();
 }
 
-extern "C" void gpu_init(){
+extern "C" __host__ void gpu_init(){
     cudaDeviceProp device_prop;
     int device_count, block_size;
 
@@ -402,40 +381,12 @@ int gcd(int a, int b) {
     return (a == 0) ? b : gcd(b % a, a);
 }
 
-void init_cuda_mining() {
-	char *d_messages;
-	unsigned char *d_output;
-
-	size_t array_size = sizeof(char) * str_length * num_messages;
-	size_t output_size = digest_size_bytes * num_messages;
-	
-	// Allocate host arrays
-    char *h_messages = read_in_messages(file_name);
-	unsigned char *h_output = (unsigned char *) malloc(output_size);
-
+__host__ uint32_t h_mine(const uint8_t* message, uint32_t start_nonce) {
 	dim3 dimBlock(ceil((double)array_size / (double)(512 * 7)));
   	dim3 dimGrid(512);
-	
-    // Allocate device arrays
-    cudaMalloc((void**) &d_messages, array_size); // upload original data to device
-	cudaMalloc((void**) &d_output, output_size); 
-	
-	char *d_messages;
-	unsigned char *d_output;
 
-	dim3 dimBlock(ceil((double)array_size / (double)(512 * 7)));
-  	dim3 dimGrid(512);
-	
-    // Allocate device arrays
-    cudaMalloc((void**) &d_messages, array_size); // upload original data to device
-	cudaMalloc((void**) &d_output, output_size); 
-	
-
-    cudaMemcpy(d_messages, h_messages, array_size, cudaMemcpyHostToDevice); // load message into device
-
-	benchmark<<<dimBlock, dimGrid>>>(d_messages, d_output, num_messages);
-
-	cudaMemcpy(h_output, d_output, array_size, cudaMemcpyDeviceToHost); // copy message from device
+	g_mine<<<dimBlock, dimGrid>>>(message, start_nonce);
+	cudaMemcpy(h_output, d_output, 1, cudaMemcpyDeviceToHost); // copy message from device
 
 	// Free arrays from memory
     free(h_messages);
