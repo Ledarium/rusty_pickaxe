@@ -47,7 +47,7 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
     let mut second = SecondBlock { eth_nonce: pre_work.eth_nonce.into(), salt: [0u64; 4], _pad: [0u64; 3] };
     let mut hashes_done = 0u64;
     //let thr_id = 0;
-    let cuda = CudaSettings { device_id: 0, block: 2, grid: 2 };
+    let cuda = CudaSettings { device_id: 0, block: 1, grid: 2 };
     unsafe {h_gpu_init()};
     debug!("GPU init");
 
@@ -56,19 +56,22 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
 
     let target = u64::from_be_bytes(target[0..8].try_into().expect("bad"));
     //debug!("Number of threads is {}", throughput);
-    let mut res_nonce = u64::MAX;
-    while res_nonce == u64::MAX {
-        second.salt[3] += hashes_done;
+    let mut res_salt = u64::MAX;
+    while res_salt == u64::MAX {
+        second.salt[3] += cuda.throughput();
         debug!("Next to mine is {:?}, done {:?}", second.salt[3], hashes_done);
         let second_block_ptr = serialize_work(&second).as_ptr();
         let ret = unsafe { h_mine(second_block_ptr, second.salt[3]+cuda.throughput(), target, cuda.block, cuda.grid)};
-        if ret != u64::MAX { res_nonce = ret; break; }
-        if u64::MAX - hashes_done < cuda.throughput() {
+        debug!("111111 ret={:?}", ret);
+        if ret != u64::MAX { res_salt = ret; break; }
+        debug!("222222");
+        if u64::MAX - hashes_done > cuda.throughput() {
+            debug!("333333");
             hashes_done += cuda.throughput();
         } else {
             debug!("not found :( try another one!");
         }
     }
-    second.salt[0] = res_nonce;
+    second.salt[0] = res_salt;
     return second.get_real_salt();
 }

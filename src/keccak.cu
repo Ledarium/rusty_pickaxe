@@ -340,20 +340,19 @@ __global__ void g_mine(uint64_t end_nonce, uint64_t target) {
     int rsize_byte = rsize/8;
     int message_len = 64;
     d_res_nonces[0] = UINT64_MAX;
-    printf("do memcpy pre_state\n");
+    //printf("do memcpy pre_state\n");
     memcpy(state, d_pre_state, 25);
     // last block and padding
     memcpy(temp, d_message, message_len);
     uint64_t* saltL = ((uint64_t *) temp)+3;
 	int tid = threadIdx.x + (blockIdx.x * blockDim.x);
 	int num_threads = blockDim.x * gridDim.x;
-    printf("tid %d threads %d\n", tid, num_threads);
+    //printf("tid %d threads %d\n", tid, num_threads);
     uint64_t start_nonce = *saltL;
-    printf("starting from %d\n", start_nonce+tid);
+    //printf("starting from %d\n", start_nonce+tid);
 	while (end_nonce - start_nonce > 0) 
     {
         *saltL = start_nonce+tid;
-        //printf(" Cur nonce %d|\n", *saltL);
         temp[message_len] = 0x01;
         memset(temp + message_len, 0, rsize - message_len);
         temp[rsize - 1] |= 0x80;
@@ -364,7 +363,7 @@ __global__ void g_mine(uint64_t end_nonce, uint64_t target) {
         keccakF();
         if (state[0] <= target) {
             d_res_nonces[0] = start_nonce+tid;
-            printf(" Cur nonce %d|\n", *saltL);
+            printf("Cur salt %d|\n", *saltL);
         }
         start_nonce +=  num_threads;
     }
@@ -404,11 +403,10 @@ extern "C" __host__ uint64_t h_mine(const uint8_t* message, uint32_t end_nonce, 
   	dim3 dimGrid(grid);
     uint64_t res_nonces[1] = {UINT64_MAX};
 
-	cudaMemcpy(d_message, message, 64, cudaMemcpyHostToDevice); // copy message to device
-	cudaMemcpy(d_res_nonces, res_nonces, 1, cudaMemcpyHostToDevice); // copy message to device
+	cudaMemcpy(d_message, message, 64*sizeof(uint8_t), cudaMemcpyHostToDevice); // copy message to device
 	g_mine<<<dimBlock, dimGrid>>>(end_nonce, target);
-	cudaMemcpy(res_nonces, d_res_nonces, 1, cudaMemcpyDeviceToHost); // copy message from device
-    cudaDeviceSynchronize();
+	cudaMemcpy(res_nonces, d_res_nonces, sizeof(uint64_t), cudaMemcpyDeviceToHost); // copy message from device
+    //cudaDeviceSynchronize();
     return res_nonces[0];
 }
 
