@@ -9,6 +9,18 @@ Single core for now. If i recieve grant (or if i get bored), i will parallelize 
 Same `config.json` as in [ramen](https://github.com/dmptrluke/ramen) miner. 
 Also `loop` option is always active by now, but I think that's okay?
 
+## Build
+
+### Ubuntu
+
+Install rust: https://www.rust-lang.org/tools/install
+
+Install extra bits: `sudo apt install build-essential libssl-dev pkg-config`
+
+### Windows
+
+Install rust: https://www.rust-lang.org/tools/install
+
 ## Run
 
 `cargo run --release config.json`

@@ -5,7 +5,7 @@ edition = "2018"
 
 [dependencies]
 rustc-hex = "*"
-tiny-keccak = {path = "tiny-keccak", features = ["keccak"]}
+tiny-keccak = { version = "*", features = ["keccak"]}
 web3 = "*"
 tokio = { version = "*", features = ["full"] }
 secp256k1 = { version = "*", features = ["recovery"]}
