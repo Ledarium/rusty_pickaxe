@@ -28,7 +28,7 @@ __device__ uint64_t d_pre_state[25];
 __device__ uint64_t state[25];    
 
 __device__ uint8_t d_message[65];    
-__device__ uint32_t d_res_nonces[1];    
+__device__ uint64_t d_res_nonces[1];    
 
 // cudaEvent_t start, stop;
 #define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
@@ -306,6 +306,12 @@ __device__ void keccakF(){
     }
 }
 
+__global__ void g_set_block() {
+    printf("do keccakf\n");
+    keccakF();
+    printf("done keccakf\n");
+}
+
 extern "C" __host__ void h_set_block(const uint8_t *bytes) {
     //get 17 bytes of data, keccakF them
     int rsize = 136;
@@ -324,28 +330,25 @@ extern "C" __host__ void h_set_block(const uint8_t *bytes) {
     printf("\n");
     */
 	cudaMemcpyToSymbol(h_pre_state, d_pre_state, 17*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
-    //keccakF(d_pre_state);
+	g_set_block<<<1,1>>>();
 }
 
-__global__ void g_mine(uint32_t end_nonce, uint64_t target) {
+__global__ void g_mine(uint64_t end_nonce, uint64_t target) {
     // get last 64 bytes, pad them and keccakF
     uint8_t temp[144];
     int rsize = 136;
     int rsize_byte = rsize/8;
     int message_len = 64;
-    d_res_nonces[0] = UINT32_MAX;
+    d_res_nonces[0] = UINT64_MAX;
     printf("do memcpy pre_state\n");
     memcpy(state, d_pre_state, 25);
-    printf("do keccakf\n");
-    keccakF();
-    printf("done keccakf\n");
     // last block and padding
     memcpy(temp, d_message, message_len);
-    uint32_t* saltL = ((uint32_t *) temp)+3;
+    uint64_t* saltL = ((uint64_t *) temp)+3;
 	int tid = threadIdx.x + (blockIdx.x * blockDim.x);
 	int num_threads = blockDim.x * gridDim.x;
     printf("tid %d threads %d\n", tid, num_threads);
-    uint32_t start_nonce = *saltL;
+    uint64_t start_nonce = *saltL;
     printf("starting from %d\n", start_nonce+tid);
 	while (end_nonce - start_nonce > 0) 
     {
@@ -359,7 +362,10 @@ __global__ void g_mine(uint32_t end_nonce, uint64_t target) {
             state[i] ^= ((uint64_t *) temp)[i];
         }
         keccakF();
-        if (state[0] <= target) d_res_nonces[0] = start_nonce+tid;
+        if (state[0] <= target) {
+            d_res_nonces[0] = start_nonce+tid;
+            printf(" Cur nonce %d|\n", *saltL);
+        }
         start_nonce +=  num_threads;
     }
 }
@@ -392,11 +398,11 @@ int gcd(int a, int b) {
     return (a == 0) ? b : gcd(b % a, a);
 }
 
-extern "C" __host__ uint32_t h_mine(const uint8_t* message, uint32_t end_nonce, uint64_t target, uint32_t block, uint32_t grid) {
+extern "C" __host__ uint64_t h_mine(const uint8_t* message, uint32_t end_nonce, uint64_t target, uint32_t block, uint32_t grid) {
 	//dim3 dimBlock(ceil((double)array_size / (double)(512 * 7)));
     dim3 dimBlock(block);
   	dim3 dimGrid(grid);
-    uint32_t res_nonces[1] = {UINT32_MAX};
+    uint64_t res_nonces[1] = {UINT64_MAX};
 
 	cudaMemcpy(d_message, message, 64, cudaMemcpyHostToDevice); // copy message to device
 	cudaMemcpy(d_res_nonces, res_nonces, 1, cudaMemcpyHostToDevice); // copy message to device
