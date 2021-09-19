@@ -1,6 +1,6 @@
 # Rusty Pickaxe
 
-Made it public thanks to generous Discord user wenl#6575. Kudos!
+Made it public thanks to generous Discord user `wenl#6575`. Kudos!
 
 Single core for now. If i recieve grant (or if i get bored), i will parallelize it.
 
@@ -34,7 +34,7 @@ Ryzen 2600  = 2.20 MH/s
  
 ## Contacts
 
-Donations are accepted here: [0x8dd47bf52589cf12ff4703951c619821cf794b77](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77)
-Discord Booba#1974
-Telegram @amazing_booba
+- Donations are accepted here: [0x8dd47bf52589cf12ff4703951c619821cf794b77](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77)
+- Discord Booba#1974
+- Telegram @amazing_booba
 
