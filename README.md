@@ -9,7 +9,9 @@ Single core for now. If i recieve grant (or if i get bored), i will parallelize 
 Same `config.json` as in [ramen](https://github.com/dmptrluke/ramen) miner. 
 Also `loop` option is always active by now, but I think that's okay?
 
-## Build
+## Prerequisites
+
+If following steps do not work for you, you can always ask for support in [Discord](https://discord.gg/xDk6enpGnM).
 
 ### Ubuntu
 
@@ -18,6 +20,11 @@ Install rust: https://www.rust-lang.org/tools/install
 Install extra bits: `sudo apt install build-essential libssl-dev pkg-config`
 
 ### Windows
+
+Install VS build tools: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019 ,
+you want "Build Tools for Visual Studio 2019". When the installer asks what parts of 
+"Build Tools for Visual Studio 2019" you want, go to the "individual components" tab
+and pick "x64/x86 build tools (latest).
 
 Install rust: https://www.rust-lang.org/tools/install
 
