@@ -53,7 +53,7 @@ __device__ const int piln[24] = {
     15, 23, 19, 13, 12, 2, 20, 14, 22, 9,  6,  1 
 };
 
-__device__ void keccak256(){
+__device__ void keccakF(){
     uint64_t temp, C[5];
 	int j;
 	
@@ -314,8 +314,11 @@ extern "C" __host__ void h_set_block(const uint8_t *bytes) {
     for (int i = 0; i < rsize_byte; i++) {
         h_pre_state[i] ^= ((uint64_t *) bytes)[i];
     }
+    for (int i = 0; i < rsize_byte; i++) {
+        printf("%d|",h_pre_state[i]);
+    }
 	cudaMemcpyToSymbol(h_pre_state, d_pre_state, 17*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
-    //keccak256(d_pre_state);
+    //keccakF(d_pre_state);
 }
 
 __global__ void g_mine(const uint8_t *message, uint32_t start_nonce, uint64_t target, uint32_t* res_nonce) {
@@ -327,12 +330,12 @@ __global__ void g_mine(const uint8_t *message, uint32_t start_nonce, uint64_t ta
     *res_nonce = UINT32_MAX;
 
     memcpy(state, d_pre_state, 25);
-    keccak256();
+    keccakF();
 
     // last block and padding
     memcpy(temp, message, message_len);
 
-    uint32_t* saltL = ((uint32_t *) temp)+8;
+    uint32_t* saltL = ((uint32_t *) temp)+3;
 
 	int tid = threadIdx.x + (blockIdx.x * blockDim.x);
 	int num_threads = blockDim.x * gridDim.x;
@@ -346,7 +349,7 @@ __global__ void g_mine(const uint8_t *message, uint32_t start_nonce, uint64_t ta
         for (int i = 0; i < rsize_byte; i++) {
             state[i] ^= ((uint64_t *) temp)[i];
         }
-        keccak256();
+        keccakF();
         if (state[0] <= target) *res_nonce = start_nonce+tid;
     }
 }
@@ -373,6 +376,7 @@ extern "C" __host__ uint32_t h_gpu_init(){
     number_threads = max_threads_per_mp / block_size;
     number_blocks = block_size * number_multi_processors;
     clock_speed = (int) (device_prop.memoryClockRate * 1000 * 1000);    
+    return number_threads;
 }
 
 int gcd(int a, int b) {
@@ -384,9 +388,18 @@ extern "C" __host__ uint32_t h_mine(const uint8_t* message, uint32_t start_nonce
     dim3 dimBlock(1024);
   	dim3 dimGrid(512);
     uint32_t res_nonce = UINT32_MAX;
-
 	g_mine<<<dimBlock, dimGrid>>>(message, start_nonce, target, &res_nonce);
     return res_nonce;
 
 	//cudaMemcpy(h_output, d_output, 1, cudaMemcpyDeviceToHost); // copy message from device
+}
+
+int main()
+{
+    h_gpu_init();
+    uint8_t test[136];
+    memset(test, 0, sizeof(test));
+    h_set_block(test);
+    uint32_t rc = h_mine(test, 0, 12000);
+    printf("\n%d\n", rc);
 }
