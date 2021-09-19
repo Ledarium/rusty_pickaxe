@@ -12,7 +12,7 @@ pub fn prepare_data(pre_work: &PreWork) -> Keccak {
     return h;
 }
 
-pub fn serialize_work(pre_work: &PreWork) -> Vec<u8> {
+pub fn serialize_work<T> (pre_work: &T) -> Vec<u8> where T:Serialize {
     return bincode::options()
         .with_fixint_encoding()
         .allow_trailing_bytes()
