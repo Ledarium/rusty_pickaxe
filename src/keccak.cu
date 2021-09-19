@@ -304,7 +304,7 @@ __device__ void keccak256(){
     }
 }
 
-__host__ void h_set_block(const uint8_t *bytes) {
+extern "C" __host__ void h_set_block(const uint8_t *bytes) {
     //get 17 bytes of data, keccakF them
     int rsize = 136;
     int rsize_byte = rsize/8;
@@ -320,8 +320,6 @@ __host__ void h_set_block(const uint8_t *bytes) {
 
 __global__ void g_mine(const uint8_t *message, uint32_t start_nonce, uint64_t target, uint32_t* res_nonce) {
     // get last 64 bytes, pad them and keccakF
-    // nonce[32] 
-    // salt[32] 
     uint8_t temp[144];
     int rsize = 136;
     int rsize_byte = rsize/8;
@@ -353,14 +351,16 @@ __global__ void g_mine(const uint8_t *message, uint32_t start_nonce, uint64_t ta
     }
 }
 
-extern "C" __host__ void gpu_init(){
+extern "C" __host__ uint32_t h_gpu_init(){
     cudaDeviceProp device_prop;
     int device_count, block_size;
 
     cudaGetDeviceCount(&device_count);
+    /*
     if (device_count != 1) {
         exit(EXIT_FAILURE);
     }
+    */
 
     if (cudaGetDeviceProperties(&device_prop, 0) != cudaSuccess) {
         exit(EXIT_FAILURE);
@@ -379,22 +379,14 @@ int gcd(int a, int b) {
     return (a == 0) ? b : gcd(b % a, a);
 }
 
-__host__ uint32_t h_mine(const uint8_t* message, uint32_t start_nonce, uint64_t target) {
+extern "C" __host__ uint32_t h_mine(const uint8_t* message, uint32_t start_nonce, uint64_t target) {
 	//dim3 dimBlock(ceil((double)array_size / (double)(512 * 7)));
     dim3 dimBlock(1024);
   	dim3 dimGrid(512);
     uint32_t res_nonce = UINT32_MAX;
 
-	g_mine<<<dimBlock, dimGrid>>>(message, start_nonce, target, *res_nonce);
+	g_mine<<<dimBlock, dimGrid>>>(message, start_nonce, target, &res_nonce);
     return res_nonce;
 
 	//cudaMemcpy(h_output, d_output, 1, cudaMemcpyDeviceToHost); // copy message from device
-
-    /*
-	// Free arrays from memory
-    free(h_messages);
-	free(h_output);
-    cudaFree(d_messages);
-	cudaFree(d_output);
-    */
 }
