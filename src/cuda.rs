@@ -5,9 +5,8 @@ use crate::utils::{PreWork, serialize_work, prepare_data};
 #[link(name = "cuda_keccak256", kind = "static")]
 extern "C" {
     fn gpu_init();
-    fn keccak256_setBlock_80(endiandata: *mut u64);
-    fn prepare_mining(thr_id: u32, throughput: u32, data: *const u64, targetH: u32, targetL: u32) -> u32;
-    fn keccak256_cpu_hash_80(thr_id: u32, throughput: u32, first_nonce: u32, nonces: *mut u32);
+    fn h_set_block(data: *const u8); //136 bytes
+    fn h_mine(data: *const u8, start_nonce: u32, target: u64, res_nonce: *mut u32) -> u32;
 }
 
 pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u32 {
@@ -17,15 +16,8 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u32 {
     let thr_id = 0;
     unsafe {gpu_init()};
 
-    let target_high = u32::from_be_bytes(target[0..4].try_into().expect("bad"));
-    let target_low = u32::from_be_bytes(target[4..8].try_into().expect("bad"));
-    let prepare_rc = unsafe { prepare_mining(
-            thr_id,
-            throughput,
-            keccak.state.buffer.0.as_ptr(),
-            target_high,
-            target_low,
-        ) };
+    let target_high = u64::from_be_bytes(target[0..8].try_into().expect("bad"));
+    unsafe { h_set_block(0, target) };
     debug!("prepare returns {}, mining, target_high {}, target_low {}", prepare_rc, target_high, target_low);
     let mut nonces: [u32; 2] = [u32::MAX, u32::MAX];
     let mut result = u32::MAX;
