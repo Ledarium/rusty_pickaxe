@@ -1,4 +1,5 @@
 use rand::Rng;
+use rustc_hex::{FromHex, ToHex};
 use log::{debug, info};
 use std::convert::TryInto;
 use crate::utils::{PreWork, serialize_work, prepare_data};
@@ -8,14 +9,19 @@ use serde::{Deserialize, Serialize};
 extern "C" {
     fn h_gpu_init() -> u32;
     fn h_set_block(data: *const u8);
-    fn h_mine(data: *const u8, end_nonce: u64, target: u64, block: u32, grid: u32) -> u64;
+    fn h_mine(data: *mut u8, end_nonce: u64, target: u64, block: u32, grid: u32) -> u64;
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct SecondBlock {
-    _pad: [u64; 3],
-    pub eth_nonce: u64,
-    pub salt: [u64; 4],
+    pub eth_nonce: [u64; 4], //256
+    pub salt: [u64; 4], //256
+    pub pad_first: u8, // 8
+    // wow rust sucks
+    pub zero_pad0: [u64; 8], // 512
+    pub zero_pad1: [u8; 6], // 48
+    pub pad_last: u8, // 8
+    // looks like total is 1088, which is what we need
 }
 
 impl SecondBlock {
@@ -44,10 +50,17 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
     // split work into parts, first will be keccakFfed and stored in memory
     let first_block: [u8; 136] = work[0..136].try_into().expect("super bad");
     // second contains nonce and salt, needs to be padded and keccakFfed
-    let mut second = SecondBlock { eth_nonce: pre_work.eth_nonce.into(), salt: [0u64; 4], _pad: [0u64; 3] };
+    let mut second = SecondBlock { 
+        eth_nonce: [0, 0, 0, pre_work.eth_nonce.into()],
+        salt: [0; 4],
+        pad_first: 0x01,
+        zero_pad0: [0; 8],
+        zero_pad1: [0; 6],
+        pad_last: 0x80,
+    };
     let mut hashes_done = 0u64;
     //let thr_id = 0;
-    let cuda = CudaSettings { device_id: 0, block: 1, grid: 2 };
+    let cuda = CudaSettings { device_id: 0, block: 1, grid: 1 };
     unsafe {h_gpu_init()};
     debug!("GPU init");
 
@@ -60,18 +73,20 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
     while res_salt == u64::MAX {
         second.salt[3] += cuda.throughput();
         debug!("Next to mine is {:?}, done {:?}", second.salt[3], hashes_done);
-        let second_block_ptr = serialize_work(&second).as_ptr();
+        let mut second_block_bytes = serialize_work(&second);
+        let second_block_hex: String = second_block_bytes.to_hex();
+        debug!("second block: {}", second_block_hex);
+        let second_block_ptr = second_block_bytes.as_mut_ptr();
+
         let ret = unsafe { h_mine(second_block_ptr, second.salt[3]+cuda.throughput(), target, cuda.block, cuda.grid)};
-        debug!("111111 ret={:?}", ret);
         if ret != u64::MAX { res_salt = ret; break; }
-        debug!("222222");
         if u64::MAX - hashes_done > cuda.throughput() {
-            debug!("333333");
             hashes_done += cuda.throughput();
         } else {
             debug!("not found :( try another one!");
+            break;
         }
     }
-    second.salt[0] = res_salt;
+    second.salt[3] = res_salt;
     return second.get_real_salt();
 }
