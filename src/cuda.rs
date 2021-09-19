@@ -1,10 +1,9 @@
-use rand::Rng;
 use log::{debug, info};
 use std::convert::TryInto;
 use crate::utils::{PreWork, serialize_work, prepare_data};
 use serde::{Deserialize, Serialize};
 
-#[link(name = "cuda_keccak256", kind = "static")]
+#[link(name = "keccak", kind = "static")]
 extern "C" {
     fn h_gpu_init() -> u32;
     fn h_set_block(data: *const u8); //136 bytes

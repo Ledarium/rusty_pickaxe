@@ -316,11 +316,13 @@ extern "C" __host__ void h_set_block(const uint8_t *bytes) {
     for (int i = 0; i < rsize_byte; i++) {
         h_pre_state[i] ^= ((uint64_t *) bytes)[i];
     }
+    /*
     printf("pre_state\n");
     for (int i = 0; i < rsize_byte; i++) {
         printf("%d|",h_pre_state[i]);
     }
     printf("\n");
+    */
 	cudaMemcpyToSymbol(h_pre_state, d_pre_state, 17*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
     //keccakF(d_pre_state);
 }
@@ -400,7 +402,7 @@ extern "C" __host__ uint32_t h_mine(const uint8_t* message, uint32_t end_nonce, 
 	cudaMemcpy(d_res_nonces, res_nonces, 1, cudaMemcpyHostToDevice); // copy message to device
 	g_mine<<<dimBlock, dimGrid>>>(end_nonce, target);
 	cudaMemcpy(res_nonces, d_res_nonces, 1, cudaMemcpyDeviceToHost); // copy message from device
-    //cudaDeviceSynchronize();
+    cudaDeviceSynchronize();
     return res_nonces[0];
 }
 
