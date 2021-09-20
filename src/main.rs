@@ -123,4 +123,5 @@ async fn main() -> web3::Result<()> {
         if !config.r#loop { break; }
     };
 
+    Ok(())
 }
