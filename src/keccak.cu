@@ -398,6 +398,9 @@ extern "C" __host__ uint64_t h_mine(const uint8_t* message, uint64_t start_nonce
 	cudaMemcpy(d_message, message, 136*sizeof(uint8_t), cudaMemcpyHostToDevice);
 	g_mine<<<dimBlock, dimGrid>>>(start_nonce, end_nonce, target, d_message, d_output);
 	cudaMemcpy(res_nonces, d_output, sizeof(uint64_t), cudaMemcpyDeviceToHost);
+
+	cudaFree(&d_output);
+	cudaFree(&d_message);
     return res_nonces[0];
 }
 
@@ -430,6 +433,8 @@ extern "C" __host__ uint32_t h_gpu_init(){
     checkCudaErrors(cudaMalloc(&d_message, 144*sizeof(uint8_t)));
     checkCudaErrors(cudaMalloc(&d_res_nonces, sizeof(uint64_t)));
     */
+    debug("%d %d %d", number_threads, number_multi_processors, block_size);
+    debug("%d %d %d", number_threads, number_multi_processors, block_size);
 
     return number_threads;
 }

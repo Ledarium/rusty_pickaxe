@@ -1,5 +1,6 @@
 use rand::Rng;
 use rustc_hex::{FromHex, ToHex};
+use std::time::Instant;
 use log::{debug, info};
 use std::convert::TryInto;
 use crate::utils::{PreWork, serialize_work, prepare_data};
@@ -73,13 +74,13 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
     //debug!("Number of threads is {}", throughput);
     let mut start_nonce = 0u64;
     let mut res_salt = u64::MAX;
+    let start_time = Instant::now();
+    second.randomize_salt();
     let mut second_block_bytes = serialize_work(&second);
     let second_block_hex: String = second_block_bytes.to_hex();
     debug!("second block: {}", second_block_hex);
-    //second.randomize_salt();
     let second_block_ptr = second_block_bytes.as_mut_ptr();
     while res_salt == u64::MAX {
-        info!("done {:?}", hashes_done);
         start_nonce += cuda.throughput();
         let ret = unsafe { h_mine(second_block_ptr, start_nonce, start_nonce+cuda.throughput(), target, cuda.block, cuda.grid)};
         if ret != u64::MAX { res_salt = ret; break; }
@@ -88,6 +89,10 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
         } else {
             info!("not found :( try another one!");
             second.randomize_salt();
+        }
+        if start_nonce % 5000000 < cuda.throughput() {
+            let elapsed = start_time.elapsed();
+            println!("Elapsed time: {:.2?}, hashrate = {:.3?}MH/s", elapsed, start_nonce as f32/elapsed.as_secs_f32() / 1_000_000f32);
         }
     }
     second.salt[3] = res_salt;
