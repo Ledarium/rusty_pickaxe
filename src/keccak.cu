@@ -20,7 +20,7 @@ int number_blocks;
 int number_threads;
 int max_threads_per_mp;
 
-__device__ static inline uint64_t swapByteOrder(uint64_t ull)
+__device__ static inline uint64_t d_swab64(uint64_t ull)
 {
     return (ull >> 56) |
           ((ull<<40) & 0x00FF000000000000) |
@@ -332,8 +332,9 @@ __global__ void g_set_block() {
     keccakF(d_pre_state);
     debug("done keccakf\n");
     debug("d_pre_state\n");
-    for (int i = 0; i < 25; i++) {
-        debug("%016llx|",d_pre_state[i]);
+    uint8_t* byte_pre_state = (uint8_t*)d_pre_state;
+    for (int i = 0; i < 136; i++) {
+        debug("%02x",byte_pre_state[i]);
     }
     debug("\n");
 }
@@ -376,9 +377,9 @@ __global__ void g_mine(uint64_t start_nonce, uint64_t end_nonce, uint64_t target
     debug("\n");
 	while (end_nonce - start_nonce > 0) 
     {
-        ((uint64_t*)message)[7] = start_nonce+tid;
+        ((uint64_t*)message)[7] = d_swab64(start_nonce+tid);
         for (int i = 0; i < rsize_byte; i++) {
-            state[i] ^= swapByteOrder(((uint64_t *) message)[i]);
+            state[i] ^= d_swab64(((uint64_t *) message)[i]);
         }
         keccakF(state);
         if (state[0] <= target) {
@@ -388,12 +389,12 @@ __global__ void g_mine(uint64_t start_nonce, uint64_t end_nonce, uint64_t target
         start_nonce += num_threads;
         debug("d_msg\n");
         for (int i = 0; i < 136; i++) {
-            debug("%02x|",message[i]);
+            debug("%02x",message[i]);
         }
         debug("\n");
         debug("state\n");
         for (int i = 0; i < 25; i++) {
-            debug("%016llx|",state[i]);
+            debug("%016llx|",d_swab64(state[i]));
         }
         debug("\n");
     }

@@ -73,12 +73,12 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
     //debug!("Number of threads is {}", throughput);
     let mut start_nonce = 0u64;
     let mut res_salt = u64::MAX;
+    let mut second_block_bytes = serialize_work(&second);
+    let second_block_hex: String = second_block_bytes.to_hex();
+    debug!("second block: {}", second_block_hex);
+    let second_block_ptr = second_block_bytes.as_mut_ptr();
     while res_salt == u64::MAX {
         info!("Next to mine is {:?}, done {:?}", start_nonce, hashes_done);
-        let mut second_block_bytes = serialize_work(&second);
-        let second_block_hex: String = second_block_bytes.to_hex();
-        debug!("second block: {}", second_block_hex);
-        let second_block_ptr = second_block_bytes.as_mut_ptr();
 
         start_nonce += cuda.throughput();
         let ret = unsafe { h_mine(second_block_ptr, start_nonce, start_nonce+cuda.throughput(), target, cuda.block, cuda.grid)};
@@ -89,6 +89,7 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
             info!("not found :( try another one!");
             second.randomize_salt();
         }
+        break
     }
     second.salt[3] = res_salt;
     return second.get_real_salt();
