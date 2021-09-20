@@ -33,7 +33,7 @@ Install rust: https://www.rust-lang.org/tools/install
 
 ## Run
 
-`cargo run --release config.json`
+`cargo run --features cuda --release config.json`
 
 Please note that CPU mining is sequential, so there is no reason to run it multiple times -
 results will be the same and you will get rejected transactions.
