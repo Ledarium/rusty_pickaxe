@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h> 
@@ -9,13 +8,23 @@
 void runBenchmarks();
 int gcd(int a, int b);
 
-
 int clock_speed;
 int number_multi_processors;
 int number_blocks;
 int number_threads;
 int max_threads_per_mp;
 
+__device__ static inline uint64_t swapByteOrder(uint64_t ull)
+{
+    return (ull >> 56) |
+          ((ull<<40) & 0x00FF000000000000) |
+          ((ull<<24) & 0x0000FF0000000000) |
+          ((ull<<8) & 0x000000FF00000000) |
+          ((ull>>8) & 0x00000000FF000000) |
+          ((ull>>24) & 0x0000000000FF0000) |
+          ((ull>>40) & 0x000000000000FF00) |
+          (ull << 56);
+}
 
 #define MSG_SIZE 16
 #define THREADS_PER_BLOCK 512
@@ -25,10 +34,6 @@ const int digest_size_bytes = digest_size / 8;
 
 uint64_t h_pre_state[25];    
 __device__ uint64_t d_pre_state[25];    
-__device__ uint64_t state[25];    
-
-__device__ uint8_t d_message[136];    
-__device__ uint64_t d_res_nonces[1];    
 
 // cudaEvent_t start, stop;
 #define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
@@ -55,7 +60,7 @@ __device__ const int piln[24] = {
     15, 23, 19, 13, 12, 2, 20, 14, 22, 9,  6,  1 
 };
 
-__device__ void keccakF(){
+__device__ void keccakF(uint64_t* state){
     uint64_t temp, C[5];
 	int j;
 	
@@ -308,14 +313,13 @@ __device__ void keccakF(){
 
 __global__ void g_set_block() {
     printf("do keccakf\n");
-    keccakF();
+    keccakF(d_pre_state);
     printf("done keccakf\n");
     printf("state\n");
     for (int i = 0; i < 25; i++) {
-        printf("%016llx|",state[i]);
+        printf("%016llx|",d_pre_state[i]);
     }
     printf("\n");
-    memset(d_message, 0, sizeof(d_message));
 }
 
 extern "C" __host__ void h_set_block(const uint8_t *bytes) {
@@ -334,59 +338,73 @@ extern "C" __host__ void h_set_block(const uint8_t *bytes) {
         printf("%016llx|",h_pre_state[i]);
     }
     printf("\n");
-	cudaMemcpyToSymbol(state, h_pre_state, 25*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(d_pre_state, h_pre_state, 25*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 	g_set_block<<<1,1>>>();
 	//cudaMemcpyToSymbol(d_pre_state, state, 25*sizeof(uint64_t), 0, cudaMemcpyDeviceToDevice);
 }
 
-__global__ void g_mine(uint64_t end_nonce, uint64_t target) {
+__global__ void g_mine(uint64_t start_nonce, uint64_t end_nonce, uint64_t target, uint8_t* message, uint64_t* d_output) {
     // get last 64 bytes, pad them and keccakF
     int rsize = 136;
     int rsize_byte = rsize/8;
-    int message_len = 64;
-    d_res_nonces[0] = UINT64_MAX;
+    uint64_t state[25];
+    d_output[0] = UINT64_MAX;
     //printf("do memcpy pre_state\n");
-    memcpy(state, d_pre_state, 25);
-    // last block and padding
-    uint64_t* saltL = ((uint64_t *) d_message)+7;
+    memcpy(state, d_pre_state, 25*sizeof(uint64_t));
+
 	int tid = threadIdx.x + (blockIdx.x * blockDim.x);
 	int num_threads = blockDim.x * gridDim.x;
     //printf("tid %d threads %d\n", tid, num_threads);
-    uint64_t start_nonce = *saltL;
     //printf("starting from %d\n", start_nonce+tid);
-    printf("d_message\n");
+    /*
+    printf("message\n");
     for (int i = 0; i < 136; i++) {
-        printf("%02x|",d_message[i]);
+        printf("%02x|",message[i]);
     }
     printf("\n");
+    */
 	while (end_nonce - start_nonce > 0) 
     {
+        ((uint64_t*)message)[7] = swapByteOrder(start_nonce+tid);
         for (int i = 0; i < rsize_byte; i++) {
-            state[i] ^= ((uint64_t *) d_message)[i];
+            state[i] ^= ((uint64_t *) message)[i];
         }
-        keccakF();
+        keccakF(state);
         if (state[0] <= target) {
-            d_res_nonces[0] = start_nonce+tid;
+            d_output[0] = start_nonce+tid;
         }
-        start_nonce +=  num_threads;
-        printf("Cur salt %d|\n", *saltL);
+        start_nonce += num_threads;
+        /*
+        printf("Cur salt %lld|\n", start_nonce+tid);
+        printf("d_msg\n");
+        for (int i = 0; i < 64; i++) {
+            printf("%02x|",message[i]);
+        }
+        printf("\n");
         printf("state\n");
         for (int i = 0; i < 25; i++) {
             printf("%016llx|",state[i]);
         }
         printf("\n");
+        */
     }
 }
 
-extern "C" __host__ uint64_t h_mine(const uint8_t* message, uint32_t end_nonce, uint64_t target, uint32_t block, uint32_t grid) {
+extern "C" __host__ uint64_t h_mine(const uint8_t* message, uint64_t start_nonce, uint64_t end_nonce, uint64_t target, uint32_t block, uint32_t grid) {
 	//dim3 dimBlock(ceil((double)array_size / (double)(512 * 7)));
     dim3 dimBlock(block);
   	dim3 dimGrid(grid);
     uint64_t res_nonces[1] = {UINT64_MAX};
 
+    uint8_t *d_message;
+    cudaMalloc((void**) &d_message, 136*sizeof(uint8_t)); // upload original data to device
+
+	uint64_t *d_output;
+	cudaMalloc((void**) &d_output, sizeof(uint64_t));
+
 	cudaMemcpy(d_message, message, 136*sizeof(uint8_t), cudaMemcpyHostToDevice);
-	g_mine<<<dimBlock, dimGrid>>>(end_nonce, target);
-	cudaMemcpy(res_nonces, d_res_nonces, sizeof(uint64_t), cudaMemcpyDeviceToHost);
+	g_mine<<<dimBlock, dimGrid>>>(start_nonce, end_nonce, target, d_message, d_output);
+	cudaMemcpy(res_nonces, d_output, sizeof(uint64_t), cudaMemcpyDeviceToHost);
     return res_nonces[0];
 }
 

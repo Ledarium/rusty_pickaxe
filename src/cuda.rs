@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 extern "C" {
     fn h_gpu_init() -> u32;
     fn h_set_block(data: *const u8);
-    fn h_mine(data: *mut u8, end_nonce: u64, target: u64, block: u32, grid: u32) -> u64;
+    fn h_mine(data: *mut u8, start_nonce: u64, end_nonce: u64, target: u64, block: u32, grid: u32) -> u64;
 }
 
 #[derive(Debug, Serialize)]
@@ -60,7 +60,7 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
     };
     let mut hashes_done = 0u64;
     //let thr_id = 0;
-    let cuda = CudaSettings { device_id: 0, block: 1, grid: 1 };
+    let cuda = CudaSettings { device_id: 0, block: 46, grid: 256 };
     unsafe {h_gpu_init()};
     debug!("GPU init");
 
@@ -69,16 +69,17 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
 
     let target = u64::from_be_bytes(target[0..8].try_into().expect("bad"));
     //debug!("Number of threads is {}", throughput);
+    let mut start_nonce = 0u64;
     let mut res_salt = u64::MAX;
     while res_salt == u64::MAX {
-        second.salt[3] += cuda.throughput();
-        debug!("Next to mine is {:?}, done {:?}", second.salt[3], hashes_done);
+        debug!("Next to mine is {:?}, done {:?}", start_nonce, hashes_done);
         let mut second_block_bytes = serialize_work(&second);
         let second_block_hex: String = second_block_bytes.to_hex();
-        debug!("second block: {}", second_block_hex);
+        //debug!("second block: {}", second_block_hex);
         let second_block_ptr = second_block_bytes.as_mut_ptr();
 
-        let ret = unsafe { h_mine(second_block_ptr, second.salt[3]+cuda.throughput(), target, cuda.block, cuda.grid)};
+        start_nonce += cuda.throughput();
+        let ret = unsafe { h_mine(second_block_ptr, start_nonce, start_nonce+cuda.throughput(), target, cuda.block, cuda.grid)};
         if ret != u64::MAX { res_salt = ret; break; }
         if u64::MAX - hashes_done > cuda.throughput() {
             hashes_done += cuda.throughput();

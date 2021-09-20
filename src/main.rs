@@ -119,8 +119,8 @@ async fn main() -> web3::Result<()> {
             .await
             .unwrap();
         info!("{:?}",tx);
-        if !config.r#loop { break; }
         */
+        if !config.r#loop { break; }
     };
 
 }
