@@ -55,6 +55,7 @@ pub struct Config {
     pub gem_type: u32,
     pub address: Address,
     pub claim: Claim,
+    pub cuda: bool,
 }
 
 pub fn vtoa<T, const N: usize>(v: Vec<T>) -> [T; N] {

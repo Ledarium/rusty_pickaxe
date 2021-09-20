@@ -9,6 +9,7 @@
     "threads": 4,
     "address": "YOUR ADDRESS HERE",
     "ding": true,
+    "cuda": true,
     "loop": true,
     "claim": {
         "private_key": "PRIVATE KEY HERE",

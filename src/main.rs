@@ -1,4 +1,5 @@
 use log::{debug, info};
+use std::io::{Error,ErrorKind};
 
 use std::fs::File;
 use std::io::Read;
@@ -12,6 +13,7 @@ use secp256k1::SecretKey;
 use bigint::uint::U256 as u256;
 
 mod cuda;
+
 mod cpu;
 mod utils;
 
@@ -90,36 +92,37 @@ async fn main() -> web3::Result<()> {
         info!("Starting mining, target {:?}", target);
         let mut target_bytes = [0u8; 32];
         target.to_big_endian(&mut target_bytes);
-        if !gpu {
-            let result = cpu::ez_cpu_mine(&pre_work, target_bytes);
-            println!("Here is CPU salt {:?}", result);
-            let string_hash: String = cpu::simple_hash(&pre_work, result.into()).to_hex();
-            let string_target: String = target_bytes.to_hex();
-            debug!("Hash:   {}", string_hash);
-            debug!("Target: {}", string_target);
+        let mut result = 0u128;
+        if config.cuda {
+            if cfg!(feature = "cuda") { result = cuda::mine_cuda(&pre_work, target_bytes); }
+            else { println!("Built without cuda but specified in config"); return Ok(()) }
         } else {
-            let result = cuda::mine_cuda(&pre_work, target_bytes);
-            println!("Here is CUDA salt {:?}", result);
+            result = cpu::ez_cpu_mine(&pre_work, target_bytes);
+        }
+        if result != 0 {
+            println!("Salt {:?}", result);
             let string_hash: String = cpu::simple_hash(&pre_work, result.into()).to_hex();
             let string_target: String = target_bytes.to_hex();
             debug!("Hash:   {}", string_hash);
             debug!("Target: {}", string_target);
-        }
 
-        /*
-        let tx = contract
-            .call("mine", (config.gem_type, result), config.address, Options::default())
-            .await
-            .unwrap();
-        // Sign the tx (can be done offline)
-        //let signed = web3.accounts().sign_transaction(tx, &prvk).await?;
-        //
-        let tx = contract.signed_call_with_confirmations(
-            "mine", (config.gem_type, result), web3::contract::Options::default(), 1, &prvk)
-            .await
-            .unwrap();
-        info!("{:?}",tx);
-        */
+            /*
+            let tx = contract
+                .call("mine", (config.gem_type, result), config.address, Options::default())
+                .await
+                .unwrap();
+            */
+            // Sign the tx (can be done offline)
+            //let signed = web3.accounts().sign_transaction(tx, &prvk).await?;
+            //
+            let tx = contract.signed_call_with_confirmations(
+                "mine", (config.gem_type, result), web3::contract::Options::default(), 1, &prvk)
+                .await
+                .unwrap();
+            info!("{:?}",tx);
+        } else {
+            println!("result is zero, salt not found or probably bug. please report");
+        }
         if !config.r#loop { break; }
     };
 
