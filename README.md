@@ -57,7 +57,7 @@ Ryzen 2600  = 2.20 MH/s
 - `Kakapo#5409` made nice json format for config file and wrote install instructions.
 - Anonymous donations were also a big help.
 
-Kudos to all of you! Donations are accepted here: [Ethereum](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [Fantom](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77) .
+Kudos to all of you! Donations are accepted here: [Ethereum](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [Fantom](https://ftmscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77) .
 
 ## Contacts
 
