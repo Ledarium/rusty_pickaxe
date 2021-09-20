@@ -1,6 +1,5 @@
 # Rusty Pickaxe
 
-Made it public thanks to generous Discord user `wenl#6575`. Kudos!
 
 Single core for now. If i recieve grant (or if i get bored), i will parallelize it.
 
@@ -48,12 +47,20 @@ Ryzen 2600  = 2.20 MH/s
 
 1. First priority is GPU miner MWE (minimal working example) based on this code
 2. Proper scheduling to allow multiple threads run simultaneously
-3. Multithreaded CPU mining [donation target is 800$]
+3. Multithreaded CPU mining
 4. Better UI
  
+## Acknowledgments
+
+- Made it public thanks to generous `wenl#6575`.
+- `Spiry#6864` helped to develop multithreading.
+- `Kakapo#5409` made nice json format for config file and wrote install instructions.
+- Anonymous donations were also a big help.
+
+Kudos to all of you! Donations are accepted here: [Ethereum](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [Fantom](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77) .
+
 ## Contacts
 
-- Donations are accepted here: [0x8dd47bf52589cf12ff4703951c619821cf794b77](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77)
-- Discord Booba#1974
+- Discord `Booba#1974`
 - Telegram @amazing_booba
 
