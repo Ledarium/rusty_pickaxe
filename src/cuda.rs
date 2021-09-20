@@ -49,6 +49,8 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
     let work = serialize_work(&pre_work); // size is 168 bytes, 32 more is salt
     // split work into parts, first will be keccakFfed and stored in memory
     let first_block: [u8; 136] = work[0..136].try_into().expect("super bad");
+    let first_block_hex: String = first_block.to_hex();
+    debug!("first block: {}", first_block_hex);
     // second contains nonce and salt, needs to be padded and keccakFfed
     let mut second = SecondBlock { 
         eth_nonce: [0, 0, 0, pre_work.eth_nonce.into()],
