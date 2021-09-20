@@ -1,5 +1,11 @@
 ## Unreleased
 
+### Added
+- CUDA
+
+### Changed
+- Better serialize, idk
+
 ## [0.0.2] - 2021-09-20
 
 ### Fixed
