@@ -57,8 +57,7 @@ async fn get_mining_work(
         sender_address: config.address.to_fixed_bytes(),
     };
 
-    // dont forget to randomize it
-    let second_block = utils::WorkSecondBlock {
+    let mut second_block = utils::WorkSecondBlock {
         contract_nonce: [0, 0, 0, contract_nonce_tx.0.as_u64()],
         salt: [0; 4],
         pad_first: 0x01, // see keccak specifications for explaination
@@ -66,6 +65,7 @@ async fn get_mining_work(
         zero_pad1: [0; 6],
         pad_last: 0x80,
     };
+    second_block.randomize_salt();
 
     let target = u256::max_value() / u256::from(gem_info.3.as_u64());
     let mut target_bytes = [0u8; 32];
@@ -117,7 +117,9 @@ async fn main() -> web3::Result<()> {
         let mut work = get_mining_work(&config, contract.clone(), chain_id.as_u32()).await.unwrap();
         let result = cpu::ez_cpu_mine(&work);
         work.second_block.salt[3] = result;
+        let real_salt = work.second_block.get_real_salt();
 
+        println!("Real salt {}", real_salt);
         let string_hash: String = cpu::simple_hash(&work).to_hex();
         debug!("Hash(r): {}", string_hash);
 
@@ -133,7 +135,7 @@ async fn main() -> web3::Result<()> {
         /*
         let prvk = SecretKey::from_str(&config.claim.private_key).unwrap(); // TODO: deserializer
         let tx = contract.signed_call_with_confirmations(
-            "mine", (config.gem_type, result), web3::contract::Options::default(), 1, &prvk)
+            "mine", (config.gem_type, real_salt), web3::contract::Options::default(), 1, &prvk)
             .await
             .unwrap();
         info!("Sent TX: {:?}",tx);
