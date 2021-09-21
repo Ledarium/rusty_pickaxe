@@ -2,9 +2,12 @@ use log::{debug, info};
 
 use std::sync::mpsc;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Error};
 use std::str::FromStr;
 use rustc_hex::{FromHex, ToHex};
+
+use tokio::runtime::Runtime;
+use futures::executor::block_on;
 
 use web3::contract::{Contract, Options};
 use web3::types::{Address, Bytes, H160, H256, U256};
@@ -16,8 +19,10 @@ use bigint::uint::U256 as u256;
 mod cpu;
 mod utils;
 
-async fn get_mining_work(config: &utils::Config, contract: Contract<web3::transports::Http>, chain_id: u32) -> utils::Work {
-    let tx = contract.query("gems", (config.gem_type,), config.address, Options::default(), None);
+async fn get_mining_work(
+        config: &utils::Config, contract: Contract<web3::transports::Http>, chain_id: u32
+    ) -> Result<utils::Work, Error> {
+    let tx = contract.query("gems", (config.gem_type,), config.address, Options::default(), None); 
     /*
     // implement From or drop this
     // (https://stackoverflow.com/questions/53194323/is-there-any-way-of-converting-a-struct-to-a-tuple)
@@ -75,7 +80,7 @@ async fn get_mining_work(config: &utils::Config, contract: Contract<web3::transp
         start_nonce: 0,
         end_nonce: u64::MAX,
     };
-    return work;
+    Ok(work)
 }
 
 #[tokio::main]
@@ -108,9 +113,9 @@ async fn main() -> web3::Result<()> {
     */
 
     loop {
-        let work = get_mining_work(&config, contract.clone(), chain_id.as_u32());
+        let runtime = Runtime::new().unwrap();
+        let mut work = get_mining_work(&config, contract.clone(), chain_id.as_u32()).await.unwrap();
         let result = cpu::ez_cpu_mine(&work);
-        println!("Here is salt {:?}", result);
         work.second_block.salt[3] = result;
 
         let string_hash: String = cpu::simple_hash(&work).to_hex();
@@ -125,12 +130,14 @@ async fn main() -> web3::Result<()> {
         //let signed = web3.accounts().sign_transaction(tx, &prvk).await?;
         //
         */
+        /*
         let prvk = SecretKey::from_str(&config.claim.private_key).unwrap(); // TODO: deserializer
         let tx = contract.signed_call_with_confirmations(
             "mine", (config.gem_type, result), web3::contract::Options::default(), 1, &prvk)
             .await
             .unwrap();
-        info!("{:?}",tx);
+        info!("Sent TX: {:?}",tx);
+        */
         if !config.r#loop { break; }
     };
      

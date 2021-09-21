@@ -1162,6 +1162,7 @@ dependencies = [
  "bigint",
  "bincode",
  "env_logger",
+ "futures",
  "log",
  "pretty-hex",
  "rand",

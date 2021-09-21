@@ -7,11 +7,12 @@ use crate::utils::{Work, serialize_work};
 pub fn prepare_data(work: &Work) -> Keccak {
     let mut h = Keccak::v256();
     h.update(&serialize_work(&work.first_block));
+    h.update(&serialize_work(&work.second_block)[0..48]);
     //debug!("Keccak hex data: {}", String::from(bytes.to_hex()));
     return h;
 }
 
-pub fn optimized_hash(mut h: Keccak, salt: u128) -> [u8; 32] {
+pub fn optimized_hash(mut h: Keccak, salt: u64) -> [u8; 32] {
     h.update(&salt.to_be_bytes());
     let mut res = [0u8; 32];
     h.finalize(&mut res);
@@ -21,17 +22,17 @@ pub fn optimized_hash(mut h: Keccak, salt: u128) -> [u8; 32] {
 pub fn simple_hash(work: &Work) -> [u8; 32] {
     let mut h = Keccak::v256();
     h.update(&serialize_work(&work.first_block));
-    h.update(&serialize_work(&work.second_block));
+    h.update(&serialize_work(&work.second_block)[0..64]);
     let mut res = [0u8; 32];
     h.finalize(&mut res);
     return res;
 }
 
-pub fn ez_cpu_mine (work: &Work) -> u128 {
+pub fn ez_cpu_mine (work: &Work) -> u64 {
     let keccak = prepare_data(work);
     let start_time = Instant::now();
     let mut hash = [0u8; 32];
-    let mut found = 0u128;
+    let mut found = 0u64;
     for iter in work.start_nonce..work.end_nonce {
         //let salt = rand::thread_rng().gen_range(0..u128::MAX);
         let salt = iter;
