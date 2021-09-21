@@ -66,8 +66,8 @@ pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
     };
     let mut hashes_done = 0u64;
     //let thr_id = 0;
-    let cuda = CudaSettings { device_id: 0, block: 46, grid: 380, counts: 300 };
-    unsafe {h_gpu_init()};
+    let mp_count = unsafe {h_gpu_init()};
+    let cuda = CudaSettings { device_id: 0, block: mp_count, grid: 380, counts: 300 };
     debug!("GPU init");
 
     unsafe { h_set_block(first_block.as_ptr()) };

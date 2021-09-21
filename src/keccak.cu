@@ -435,8 +435,7 @@ extern "C" __host__ uint32_t h_gpu_init(){
     checkCudaErrors(cudaMalloc(&d_message, 144*sizeof(uint8_t)));
     checkCudaErrors(cudaMalloc(&d_res_nonces, sizeof(uint64_t)));
     */
-    debug("thread %d mp %d block size %d\n", number_threads, number_multi_processors, block_size);
-    return 0;
+    return number_multi_processors;
 }
 
 int gcd(int a, int b) {
