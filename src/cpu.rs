@@ -1,6 +1,5 @@
 use tiny_keccak::{Hasher, Keccak};
 use log::debug;
-use std::time::Instant;
 use rustc_hex::ToHex;
 use crate::utils::{Work, serialize_work};
 
@@ -31,9 +30,8 @@ pub fn simple_hash(work: &Work) -> [u8; 32] {
 pub fn ez_cpu_mine (work: &Work) -> u64 {
     debug!("Got work {:?}", work);
     let keccak = prepare_data(work);
-    let start_time = Instant::now();
     let mut hash = [0u8; 32];
-    let mut found = 0u64;
+    let mut found = u64::MAX;
     for iter in work.start_nonce..work.end_nonce {
         //let salt = rand::thread_rng().gen_range(0..u128::MAX);
         let salt = iter;
@@ -47,12 +45,7 @@ pub fn ez_cpu_mine (work: &Work) -> u64 {
                 break;
             }
         }
-        if iter % 500000 == 1 {
-            debug!("Trying salt {}", salt);
-            let elapsed = start_time.elapsed();
-            println!("Elapsed time: {:.2?}, hashrate = {}", elapsed, iter as f32/elapsed.as_secs_f32());
-        }
-        if found > 0 { break };
+        if found != u64::MAX { break };
     }
     let string_hash: String = hash.to_hex();
     let string_target: String = work.target.to_hex();

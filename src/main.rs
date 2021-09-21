@@ -1,5 +1,6 @@
 use log::{debug, info};
 
+use std::time::Instant;
 use std::sync::mpsc;
 use std::fs::File;
 use std::io::{Read, Error};
@@ -78,7 +79,7 @@ async fn get_mining_work(
         second_block: second_block,
         target: target_bytes,
         start_nonce: 0,
-        end_nonce: u64::MAX,
+        end_nonce: 10_000_000u64,
     };
     Ok(work)
 }
@@ -113,15 +114,24 @@ async fn main() -> web3::Result<()> {
     */
 
     loop {
-        let runtime = Runtime::new().unwrap();
-        let mut work = get_mining_work(&config, contract.clone(), chain_id.as_u32()).await.unwrap();
-        let result = cpu::ez_cpu_mine(&work);
-        work.second_block.salt[3] = result;
-        let real_salt = work.second_block.get_real_salt();
+        //let runtime = Runtime::new().unwrap();
+        let mut real_salt = u128::MAX;
+        while real_salt == u128::MAX {
+            let mut work = get_mining_work(&config, contract.clone(), chain_id.as_u32()).await.unwrap();
+            let start_time = Instant::now();
+            let result = cpu::ez_cpu_mine(&work);
+            if result == u64::MAX {
+                let elapsed = start_time.elapsed();
+                println!("Elapsed time: {:.2?}, hashrate = {:.3}MH/s", elapsed, (work.end_nonce - work.start_nonce) as f32/elapsed.as_secs_f32()/1_000_000f32);
+                continue;
+            }
 
-        println!("Real salt {}", real_salt);
-        let string_hash: String = cpu::simple_hash(&work).to_hex();
-        debug!("Hash(r): {}", string_hash);
+            work.second_block.salt[3] = result;
+            real_salt = work.second_block.get_real_salt();
+            println!("Real salt {}", real_salt);
+            let string_hash: String = cpu::simple_hash(&work).to_hex();
+            debug!("Hash(r): {}", string_hash);
+        }
 
         /*
         let tx = contract
@@ -132,14 +142,12 @@ async fn main() -> web3::Result<()> {
         //let signed = web3.accounts().sign_transaction(tx, &prvk).await?;
         //
         */
-        /*
         let prvk = SecretKey::from_str(&config.claim.private_key).unwrap(); // TODO: deserializer
         let tx = contract.signed_call_with_confirmations(
             "mine", (config.gem_type, real_salt), web3::contract::Options::default(), 1, &prvk)
             .await
             .unwrap();
-        info!("Sent TX: {:?}",tx);
-        */
+        println!("Sent TX: {:?}",tx);
         if !config.r#loop { break; }
     };
      
