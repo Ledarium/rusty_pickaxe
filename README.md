@@ -6,7 +6,7 @@ Single core for now. If i recieve grant (or if i get bored), i will parallelize 
 ## Config
 
 Same `config.json` as in [ramen](https://github.com/dmptrluke/ramen) miner. 
-Also `loop` option is always active by now, but I think that's okay?
+`loop` option works since v0.0.2.
 
 ## Prerequisites
 
