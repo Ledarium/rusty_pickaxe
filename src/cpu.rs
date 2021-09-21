@@ -2,15 +2,12 @@ use tiny_keccak::{Hasher, Keccak};
 use log::debug;
 use std::time::Instant;
 use rustc_hex::ToHex;
-use crate::utils::{PreWork, serialize_work};
+use crate::utils::{Work, serialize_work};
 
-pub fn prepare_data(pre_work: &PreWork) -> Keccak {
+pub fn prepare_data(work: &Work) -> Keccak {
     let mut h = Keccak::v256();
-    let bytes = serialize_work(pre_work);
-    h.update(&bytes);
-    h.update(&[0u8; 16]); //salt high bits
-    let string: String = bytes.to_hex();
-    debug!("hex data: {}", string);
+    h.update(&serialize_work(&work.first_block));
+    //debug!("Keccak hex data: {}", String::from(bytes.to_hex()));
     return h;
 }
 
@@ -21,31 +18,29 @@ pub fn optimized_hash(mut h: Keccak, salt: u128) -> [u8; 32] {
     return res;
 }
 
-pub fn simple_hash(pre_work: &PreWork, salt: u128) -> [u8; 32] {
+pub fn simple_hash(work: &Work) -> [u8; 32] {
     let mut h = Keccak::v256();
-    let bytes = serialize_work(&pre_work);
-    h.update(&bytes);
-    h.update(&[0u8; 16]);
-    h.update(&salt.to_be_bytes());
+    h.update(&serialize_work(&work.first_block));
+    h.update(&serialize_work(&work.second_block));
     let mut res = [0u8; 32];
     h.finalize(&mut res);
     return res;
 }
 
-pub fn ez_cpu_mine (pre_work: &PreWork, target: [u8; 32]) -> u128 {
-    let owork = prepare_data(pre_work);
+pub fn ez_cpu_mine (work: &Work) -> u128 {
+    let keccak = prepare_data(work);
     let start_time = Instant::now();
-    let mut hash = [0u8;32];
+    let mut hash = [0u8; 32];
     let mut found = 0u128;
-    for iter in 0..u128::MAX {
+    for iter in work.start_nonce..work.end_nonce {
         //let salt = rand::thread_rng().gen_range(0..u128::MAX);
         let salt = iter;
-        hash = optimized_hash(owork.clone(), salt);
-        //hash = simple_hash(pre_work, salt);
+        hash = optimized_hash(keccak.clone(), salt);
+        //hash = simple_hash(work, salt);
         for index in 0..32 { //idk rusty way to write this
-            if hash[index] > target[index] {
+            if hash[index] > work.target[index] {
                 break;
-            } else if hash[index] < target[index] {
+            } else if hash[index] < work.target[index] {
                 found = salt;
                 break;
             }
@@ -58,7 +53,7 @@ pub fn ez_cpu_mine (pre_work: &PreWork, target: [u8; 32]) -> u128 {
         if found > 0 { break };
     }
     let string_hash: String = hash.to_hex();
-    let string_target: String = target.to_hex();
+    let string_target: String = work.target.to_hex();
     debug!("Hash:   {}", string_hash);
     debug!("Target: {}", string_target);
     return found;

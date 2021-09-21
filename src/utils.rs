@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use web3::types::Address;
 use bincode::Options;
 
-pub fn serialize_work(pre_work: &PreWork) -> Vec<u8> {
+pub fn serialize_work<T> (pre_work: &T) -> Vec<u8> where T:Serialize {
     return bincode::options()
         .with_fixint_encoding()
         .allow_trailing_bytes()
@@ -11,8 +11,20 @@ pub fn serialize_work(pre_work: &PreWork) -> Vec<u8> {
         .serialize(&pre_work).unwrap();
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PreWork {
+#[derive(Debug, Serialize)]
+pub struct WorkSecondBlock {
+    pub contract_nonce: [u64; 4], //256
+    pub salt: [u64; 4], //256
+    pub pad_first: u8, // 8
+    // wow rust sucks
+    pub zero_pad0: [u64; 8], // 512
+    pub zero_pad1: [u8; 6], // 48
+    pub pad_last: u8, // 8
+    // looks like total is 1088, which is what we need
+}
+
+#[derive(Debug, Serialize)]
+pub struct WorkFirstBlock {
     pub _pad1: [u32; 7],
     pub chain_id: u32,
     pub entropy: [u8; 32],
@@ -20,9 +32,15 @@ pub struct PreWork {
     pub sender_address: [u8; 20],
     pub _pad2: [u32; 7],
     pub gem_id: u32,
-    pub _pad3: [u32; 7],
-    pub eth_nonce: u32,
-    //next 256 bits are salt. we define them in miner struct
+}
+
+#[derive(Debug, Serialize)]
+pub struct Work {
+    pub first_block: WorkFirstBlock,
+    pub second_block: WorkSecondBlock,
+    pub target: [u8; 32],
+    pub start_nonce: u64,
+    pub end_nonce: u64,
 }
 
 #[derive(Debug, Deserialize)]
