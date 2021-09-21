@@ -7,8 +7,8 @@ use crate::utils::{Work, serialize_work};
 pub fn prepare_data(work: &Work) -> Keccak {
     let mut h = Keccak::v256();
     h.update(&serialize_work(&work.first_block));
-    h.update(&serialize_work(&work.second_block)[0..48]);
     //debug!("Keccak hex data: {}", String::from(bytes.to_hex()));
+    h.update(&serialize_work(&work.second_block)[0..56]);
     return h;
 }
 
@@ -29,6 +29,7 @@ pub fn simple_hash(work: &Work) -> [u8; 32] {
 }
 
 pub fn ez_cpu_mine (work: &Work) -> u64 {
+    debug!("Got work {:?}", work);
     let keccak = prepare_data(work);
     let start_time = Instant::now();
     let mut hash = [0u8; 32];
@@ -81,10 +82,10 @@ mod tests {
         second_block: WorkSecondBlock {
             contract_nonce: [0, 0, 0, 0],
             salt: [0; 4],
-            pad_first: 0x01, // see keccak specifications for explaination
+            pad_first: 0x01, 
+            pad_last: 0x80, // see keccak specifications for explaination
             zero_pad0: [0; 8],
             zero_pad1: [0; 6],
-            pad_last: 0x80,
         }, 
         start_nonce: 0,
         end_nonce: u64::MAX,

@@ -90,7 +90,7 @@ mod tests {
     use rustc_hex::ToHex;
 
     #[test]
-    fn test_bin_data() {
+    fn test_serialzing_first() {
         let ex_first_block = WorkFirstBlock {
             _pad1: [0u32; 7],
             chain_id: 1u32,
@@ -102,5 +102,18 @@ mod tests {
         };
         let bytes: String = serialize_work(&ex_first_block).to_hex();
         assert_eq!(bytes, "00000000000000000000000000000000000000000000000000000000000000016262626262626262626262626262626262626262626262626262626262626262ffcf8fdee72ac11b5c542428b35eef5769c409f090f8bf6a479f320ead074411a4b0e7944ea8c9c10000000000000000000000000000000000000000000000000000000000000001");
+    }
+    #[test]
+    fn test_serialzing_last() {
+        let mut second_block = WorkSecondBlock {
+            contract_nonce: [1, 2, 3, 4],
+            salt: [u64::MAX; 4],
+            pad_first: 0x01, // see keccak specifications for explaination
+            zero_pad0: [0; 8],
+            zero_pad1: [0; 6],
+            pad_last: 0x80,
+        };
+        let bytes: String = serialize_work(&second_block).to_hex();
+        assert_eq!(bytes, "0000000000000001000000000000000200000000000000030000000000000004ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080");
     }
 }
