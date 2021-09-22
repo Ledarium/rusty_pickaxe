@@ -135,7 +135,7 @@ async fn main() -> web3::Result<()> {
                     let result = cpu::ez_cpu_mine(&work);
                     if result == u64::MAX {
                         let elapsed = start_time.elapsed();
-                        println!("[{}] Elapsed time: {:.2?}, hashrate = {:.3}MH/s",
+                        println!("[{}] Elapsed time: {:.2?}, thread hashrate = {:.3}MH/s",
                                  tid,
                                  elapsed,
                                  (work.end_nonce - work.start_nonce) as f32/elapsed.as_secs_f32()/1_000_000f32);

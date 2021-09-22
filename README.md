@@ -41,6 +41,8 @@ CPU | Single core | Threads | Multi core
 --- | --- | --- | ---
 Ryzen 3700X | 2.67 | 16 | ~18.70
 Ryzen 2600 | 2.20 | 12 | ~13.44
+Core i5-9600k@5.0GHz | 2.82 | 6 | ~16.92
+
 
 ## Improvement plan (ordered by priority)
 
