@@ -1,12 +1,13 @@
 # Rusty Pickaxe
 
-
-Single core for now. If i recieve grant (or if i get bored), i will parallelize it.
+Multithreaded CPU miner for [Provably Rare Gems](https://gems.alphafinance.io/#/rarity), written in Rust.
+There is also closed-source GPU version, waiting to be released.
 
 ## Config
 
 Same `config.json` as in [ramen](https://github.com/dmptrluke/ramen) miner. 
-`loop` option works since v0.0.2.
+`loop` option works since v0.0.2. `threads` options works and is required since v0.0.4.
+You will probably want to set `threads` equal or less than your CPUs thread count.
 
 ## Prerequisites
 
@@ -31,16 +32,15 @@ Install rust: https://www.rust-lang.org/tools/install
 
 `cargo run --release config.json`
 
-Mining is no longer sequential, so you can run it multiple times, until proper multithreading
-is implemented.
-
 ## Hashrate test
 
+Data is stated in MH/s.
 You can share your results to appear here.
 
-Ryzen 3700X = 2.67 MH/s
-
-Ryzen 2600  = 2.20 MH/s
+CPU | Single core | Threads | Multi core
+--- | --- | --- | ---
+Ryzen 3700X | 2.67 | 16 | ~18.70
+Ryzen 2600 | 2.20 | 12 | ~13.44
 
 ## Improvement plan (ordered by priority)
 
