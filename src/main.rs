@@ -1,7 +1,9 @@
 use log::{debug, info};
 
-use std::time::Instant;
 use std::sync::mpsc;
+use std::{thread,time};
+
+use std::time::Instant;
 use std::fs::File;
 use std::io::{Read, Error};
 use std::str::FromStr;
@@ -71,7 +73,6 @@ async fn get_mining_work(
     let target = u256::max_value() / u256::from(gem_info.3.as_u64());
     let mut target_bytes = [0u8; 32];
     target.to_big_endian(&mut target_bytes);
-    println!("Diff is {:?}, nonce {}", gem_info.3, second_block.contract_nonce[3]);
     info!("Returning job, target {:?}", target);
 
     let work = utils::Work {
@@ -92,7 +93,7 @@ async fn main() -> web3::Result<()> {
     let mut filedata = String::new();
     file.read_to_string(&mut filedata).unwrap();
 
-    let config: utils::Config = serde_json::from_str(&filedata).unwrap();
+    let mut config: utils::Config = serde_json::from_str(&filedata).unwrap();
     debug!("{:?}", config);
 
     let transport = web3::transports::Http::new(&config.network.rpc)?;
@@ -110,29 +111,90 @@ async fn main() -> web3::Result<()> {
     tokio::task::spawn_blocking(|| {
         std::thread::sleep(Duration::from_millis(2800));
     })
-    let (tx, rx) = mpsc::channel();
     */
+    if config.threads > 128 {
+        println!("wow thats a lot of threads. limiting to 128");
+        config.threads = 128;
+    }
+
 
     loop {
         //let runtime = Runtime::new().unwrap();
+        //
+        
+        let mut channel_work_handles = vec![];
+        for tid in 0usize..config.threads {
+            let (work_tx, work_rx) = mpsc::channel();
+            let (result_tx, result_rx) = mpsc::channel();
+            &channel_work_handles.push((work_tx, result_rx));
+            thread::spawn(move || {
+                let mut real_salt = u128::MAX;
+                while real_salt == u128::MAX {
+                    let start_time = Instant::now();
+                    let mut work = match work_rx.recv() {
+                        Ok(work) => work,
+                        Err(e) => break,
+                    };
+                    let result = cpu::ez_cpu_mine(&work);
+                    if result == u64::MAX {
+                        let elapsed = start_time.elapsed();
+                        println!("[{}] Elapsed time: {:.2?}, hashrate = {:.3}MH/s",
+                                 tid,
+                                 elapsed,
+                                 (work.end_nonce - work.start_nonce) as f32/elapsed.as_secs_f32()/1_000_000f32);
+                        result_tx.send(u128::MAX);
+                        continue;
+                    }
+
+                    work.second_block.salt[3] = result;
+                    real_salt = work.second_block.get_real_salt();
+                    result_tx.send(real_salt);
+                    let string_hash: String = cpu::simple_hash(&work).to_hex();
+                    debug!("Hash(r): {}", string_hash);
+                    break;
+                }
+            });
+        }
+        info!("initialized {} threads", channel_work_handles.len());
+
+        for tid_handles in &channel_work_handles {
+            for _ in 0..2 {
+                let work = get_mining_work(&config.clone(), contract.clone(), chain_id.as_u32()).await.unwrap();
+                info!("Sending two initial works");
+                tid_handles.0.send(work);
+            }
+        }
+        //println!("Diff is {:?}, nonce {}", gem_info.3, second_block.contract_nonce[3]);
+
         let mut real_salt = u128::MAX;
         while real_salt == u128::MAX {
-            let mut work = get_mining_work(&config, contract.clone(), chain_id.as_u32()).await.unwrap();
-            let start_time = Instant::now();
-            let result = cpu::ez_cpu_mine(&work);
-            if result == u64::MAX {
-                let elapsed = start_time.elapsed();
-                println!("Elapsed time: {:.2?}, hashrate = {:.3}MH/s", elapsed, (work.end_nonce - work.start_nonce) as f32/elapsed.as_secs_f32()/1_000_000f32);
-                continue;
+            for tid_handles in &channel_work_handles {
+                let result = tid_handles.1.try_recv();
+                if !result.is_err() {
+                    real_salt = result.unwrap();
+                    debug!("real_salt = {}", real_salt);
+                    if real_salt == u128::MAX {
+                        let work = get_mining_work(&config.clone(), contract.clone(), chain_id.as_u32()).await.unwrap();
+                        tid_handles.0.send(work);
+                        info!("No salt found, sending work");
+                    } else {
+                        println!("Real salt {}", real_salt);
+                        break;
+                    }
+                }
             }
-
-            work.second_block.salt[3] = result;
-            real_salt = work.second_block.get_real_salt();
-            println!("Real salt {}", real_salt);
-            let string_hash: String = cpu::simple_hash(&work).to_hex();
-            debug!("Hash(r): {}", string_hash);
+            debug!("All threads working hard, going to sleep now");
+            thread::sleep(time::Duration::from_millis(100));
         }
-
+                
+        let prvk = SecretKey::from_str(&config.claim.private_key).unwrap(); // TODO: deserializer
+        let tx = contract.signed_call_with_confirmations(
+            "mine", (config.gem_type, real_salt), web3::contract::Options::default(), 1, &prvk);
+        for tid_handles in &channel_work_handles {
+            drop(&tid_handles.0);
+        }
+        let tx_result = tx.await.unwrap();
+        println!("Sent TX: {}tx/{:?}", config.network.explorer, tx_result.transaction_hash);
         /*
         let tx = contract
             .call("mine", (config.gem_type, result), config.address, Options::default())
@@ -142,12 +204,6 @@ async fn main() -> web3::Result<()> {
         //let signed = web3.accounts().sign_transaction(tx, &prvk).await?;
         //
         */
-        let prvk = SecretKey::from_str(&config.claim.private_key).unwrap(); // TODO: deserializer
-        let tx = contract.signed_call_with_confirmations(
-            "mine", (config.gem_type, real_salt), web3::contract::Options::default(), 1, &prvk)
-            .await
-            .unwrap();
-        println!("Sent TX: {:?}",tx);
         if !config.r#loop { break; }
     };
      

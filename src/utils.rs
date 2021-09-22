@@ -53,7 +53,7 @@ pub struct Work {
     pub end_nonce: u64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Network {
     pub chain_id: String, //not used, getting from contract
     pub rpc: String,
@@ -61,19 +61,20 @@ pub struct Network {
     pub gem_address: Address,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Claim {
     pub private_key: String,
     pub maximum_gas_price: u32, //not used, not there yet
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     pub r#loop: bool,
     pub network: Network,
     pub gem_type: u32,
     pub address: Address,
     pub claim: Claim,
+    pub threads: usize,
 }
 
 pub fn vtoa<T, const N: usize>(v: Vec<T>) -> [T; N] {
