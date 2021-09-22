@@ -44,7 +44,7 @@ Ryzen 2600  = 2.20 MH/s
 
 ## Improvement plan (ordered by priority)
 
-1. Multithreaded CPU mining
+1. Proper error handling
 2. Better UI
  
 ## Acknowledgments

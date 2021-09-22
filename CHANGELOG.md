@@ -1,5 +1,8 @@
 ## Unreleased
 
+## [0.0.4] - 2021-09-22
+- Multithreading works
+
 ## [0.0.3] - 2021-09-22
 
 ### Fixed
