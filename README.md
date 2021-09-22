@@ -31,9 +31,8 @@ Install rust: https://www.rust-lang.org/tools/install
 
 `cargo run --release config.json`
 
-Please note that mining is sequential, so there is no reason to run it multiple times -
-results will be the same and you will get rejected transactions. Need to implement proper
-scheduling to get it right and to work with GPU.
+Mining is no longer sequential, so you can run it multiple times, until proper multithreading
+is implemented.
 
 ## Hashrate test
 
@@ -45,16 +44,14 @@ Ryzen 2600  = 2.20 MH/s
 
 ## Improvement plan (ordered by priority)
 
-1. First priority is GPU miner MWE (minimal working example) based on this code
-2. Proper scheduling to allow multiple threads run simultaneously
-3. Multithreaded CPU mining
-4. Better UI
+1. Multithreaded CPU mining
+2. Better UI
  
 ## Acknowledgments
 
 - Made it public thanks to generous `wenl#6575`.
-- `Spiry#6864` helped to develop multithreading.
 - `Kakapo#5409` made nice json format for config file and wrote install instructions.
+- Also thanks to `Spiry#6864`, `spiz0r#7566` for donations.
 - Anonymous donations were also a big help.
 
 Kudos to all of you! Donations are accepted here: [Ethereum](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [Fantom](https://ftmscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77) .
