@@ -1,7 +1,12 @@
 ## Unreleased
 
 ## [0.0.4] - 2021-09-22
-- Multithreading works
+
+### Added
+- Multithreading, and it works
+
+### Fixed
+- Found TX is now displayed as address
 
 ## [0.0.3] - 2021-09-22
 
