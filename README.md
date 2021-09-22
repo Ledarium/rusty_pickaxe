@@ -23,7 +23,7 @@ Install extra bits: `sudo apt install build-essential libssl-dev pkg-config`
 Install VS build tools: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019 ,
 you want "Build Tools for Visual Studio 2019". When the installer asks what parts of 
 "Build Tools for Visual Studio 2019" you want, go to the "individual components" tab
-and pick "x64/x86 build tools (latest).
+and pick "x64/x86 build tools (latest)".
 
 Install rust: https://www.rust-lang.org/tools/install
 

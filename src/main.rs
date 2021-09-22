@@ -9,9 +9,6 @@ use std::io::{Read, Error};
 use std::str::FromStr;
 use rustc_hex::{FromHex, ToHex};
 
-use tokio::runtime::Runtime;
-use futures::executor::block_on;
-
 use web3::contract::{Contract, Options};
 use web3::types::{Address, Bytes, H160, H256, U256};
 

@@ -1157,12 +1157,11 @@ dependencies = [
 
 [[package]]
 name = "rusty_pickaxe"
-version = "0.0.1"
+version = "0.0.4"
 dependencies = [
  "bigint",
  "bincode",
  "env_logger",
- "futures",
  "log",
  "pretty-hex",
  "rand",
