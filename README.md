@@ -51,6 +51,7 @@ Ryzen 2600 | 2.20 | 12 | ~13.44
 Core i5-9600k@5.0GHz | 2.82 | 6 | ~16.92
 RTX 3070 | 1007 | - | -
 RTX 1080 Ti | 787 | - | -
+=======
 
 
 ## Improvement plan (ordered by priority)

@@ -1,3 +1,4 @@
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use web3::types::Address;
