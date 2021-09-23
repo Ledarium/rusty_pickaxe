@@ -3,8 +3,20 @@
 ### Added
 - CUDA
 
-### Changed
-- Better serialize, idk
+## [0.0.4] - 2021-09-22
+
+### Added
+- Multithreading, and it works
+
+### Fixed
+- Found TX is now displayed as address
+
+## [0.0.3] - 2021-09-22
+
+### Fixed
+- Mining is not sequential now
+- Poll work params every N iterations to prevent stale salts
+- Refactor code to prepare for proper multithreading
 
 ## [0.0.2] - 2021-09-20
 
