@@ -1,9 +1,8 @@
-use rand::Rng;
 use rustc_hex::{FromHex, ToHex};
 use std::time::Instant;
 use log::{debug, info};
 use std::convert::TryInto;
-use crate::utils::{PreWork, serialize_work, prepare_data};
+use crate::utils::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "cuda")]
@@ -12,27 +11,6 @@ extern "C" {
     fn h_gpu_init() -> u32;
     fn h_set_block(data: *const u8);
     fn h_mine(data: *mut u8, start_nonce: u64, counts: u32, target: u64, block: u32, grid: u32) -> u64;
-}
-
-#[derive(Debug, Serialize)]
-pub struct SecondBlock {
-    pub eth_nonce: [u64; 4], //256
-    pub salt: [u64; 4], //256
-    pub pad_first: u8, // 8
-    // wow rust sucks
-    pub zero_pad0: [u64; 8], // 512
-    pub zero_pad1: [u8; 6], // 48
-    pub pad_last: u8, // 8
-    // looks like total is 1088, which is what we need
-}
-
-impl SecondBlock {
-    fn randomize_salt(&mut self) {
-        self.salt[2] = rand::thread_rng().gen_range(0..u64::MAX);
-    }
-    fn get_real_salt(&self) -> u128 {
-        u128::from(self.salt[3]) + u128::from(self.salt[2])*(u128::from(u64::MAX)+1)
-    }
 }
 
 #[derive(Debug)]
@@ -49,7 +27,7 @@ impl CudaSettings {
 }
 
 #[cfg(feature = "cuda")]
-pub fn mine_cuda(pre_work: &PreWork, target: [u8; 32]) -> u128 {
+pub fn mine_cuda(work: Work) -> u64 {
     let work = serialize_work(&pre_work); // size is 168 bytes, 32 more is salt
     // split work into parts, first will be keccakFfed and stored in memory
     let first_block: [u8; 136] = work[0..136].try_into().expect("super bad");

@@ -135,10 +135,10 @@ async fn main() -> web3::Result<()> {
                     };
                     let result = u64::MAX;
                     if config.cuda {
-                        if cfg!(feature = "cuda") { result = cuda::mine_cuda(&pre_work, target_bytes); }
+                        if cfg!(feature = "cuda") { result = cuda::mine_cuda(work); }
                         else { println!("Built without cuda but specified in config"); return Ok(()) }
                     } else {
-                        result = cpu::ez_cpu_mine(&pre_work, target_bytes);
+                        result = cpu::ez_cpu_mine(work);
                     }
                     if result == u64::MAX {
                         let elapsed = start_time.elapsed();
