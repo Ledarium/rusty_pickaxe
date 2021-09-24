@@ -122,6 +122,7 @@ async fn main() -> web3::Result<()> {
         println!("wow thats a lot of threads. limiting to 128");
         config.threads = 128;
     }
+    let mut gems_found = 0;
 
     loop {
         //let runtime = Runtime::new().unwrap();
@@ -187,10 +188,11 @@ async fn main() -> web3::Result<()> {
                     real_salt = result.unwrap();
                     if real_salt == u128::MAX {
                         thread_hashrates[tid] = tid_handles.2.recv().unwrap();
-                        println!("[{}] thread hashrate = {:.3}MH/s, total = {:.3}MH/s",
+                        println!("[{}] thread hashrate = {:.3}MH/s, total = {:.3}MH/s, found {} gems",
                                  tid,
                                  thread_hashrates[tid] / MEGA,
-                                 total_hashrate / MEGA);
+                                 total_hashrate / MEGA,
+                                 gems_found);
                         let work = get_mining_work(
                             &config.clone(),
                             contract.clone(),
@@ -201,6 +203,7 @@ async fn main() -> web3::Result<()> {
                         tid_handles.0.send(work);
                         info!("No salt found, sending work");
                     } else {
+                        gems_found += 1;
                         println!("Real salt {}", real_salt);
                         break;
                     }
