@@ -1,5 +1,4 @@
 use log::{debug, info};
-use std::io::{Error,ErrorKind};
 
 use std::sync::mpsc;
 use std::{thread,time};
@@ -22,7 +21,10 @@ mod cpu;
 mod utils;
 
 async fn get_mining_work(
-        config: &utils::Config, contract: Contract<web3::transports::Http>, chain_id: u32
+        config: &utils::Config,
+        contract: Contract<web3::transports::Http>,
+        chain_id: u32,
+        end_nonce: u64,
     ) -> Result<utils::Work, Error> {
     let tx = contract.query("gems", (config.gem_type,), config.address, Options::default(), None); 
     /*
@@ -79,7 +81,7 @@ async fn get_mining_work(
         second_block: second_block,
         target: target_bytes,
         start_nonce: 0,
-        end_nonce: 10_000_000u64,
+        end_nonce: end_nonce,
     };
     Ok(work)
 }
@@ -111,6 +113,10 @@ async fn main() -> web3::Result<()> {
         std::thread::sleep(Duration::from_millis(2800));
     })
     */
+    let cuda_enabled = config.cuda;
+    if cuda_enabled {
+        config.threads = 1;
+    }
     if config.threads > 128 {
         println!("wow thats a lot of threads. limiting to 128");
         config.threads = 128;
@@ -124,7 +130,8 @@ async fn main() -> web3::Result<()> {
         for tid in 0usize..config.threads {
             let (work_tx, work_rx) = mpsc::channel();
             let (result_tx, result_rx) = mpsc::channel();
-            &channel_work_handles.push((work_tx, result_rx));
+            let (hashrate_tx, hashrate_rx) = mpsc::channel();
+            &channel_work_handles.push((work_tx, result_rx, hashrate_rx));
             thread::spawn(move || {
                 let mut real_salt = u128::MAX;
                 while real_salt == u128::MAX {
@@ -133,37 +140,36 @@ async fn main() -> web3::Result<()> {
                         Ok(work) => work,
                         Err(e) => break,
                     };
-                    let result = u64::MAX;
-                    if config.cuda {
-                        if cfg!(feature = "cuda") { result = cuda::mine_cuda(work); }
-                        else { println!("Built without cuda but specified in config"); return Ok(()) }
+                    let mut result = u64::MAX;
+                    if cuda_enabled {
+                        if cfg!(feature = "cuda") { result = cuda::mine_cuda(&work); }
+                        else { println!("Built without cuda but specified in config"); return }
                     } else {
-                        result = cpu::ez_cpu_mine(work);
+                        result = cpu::ez_cpu_mine(&work);
                     }
                     if result == u64::MAX {
                         let elapsed = start_time.elapsed();
-                        println!("[{}] Elapsed time: {:.2?}, thread hashrate = {:.3}MH/s",
-                                 tid,
-                                 elapsed,
-                                 (work.end_nonce - work.start_nonce) as f32/elapsed.as_secs_f32()/1_000_000f32);
+                        hashrate_tx.send((work.end_nonce - work.start_nonce) as f64/elapsed.as_secs_f64());
                         result_tx.send(u128::MAX);
                         continue;
                     }
-
                     work.second_block.salt[3] = result;
                     real_salt = work.second_block.get_real_salt();
-                    result_tx.send(real_salt);
                     let string_hash: String = cpu::simple_hash(&work).to_hex();
+                    //let string_target: String = work.target.to_hex();
+                    //debug!("Target: {}", string_target);
                     debug!("Hash(r): {}", string_hash);
+                    result_tx.send(real_salt);
                     break;
                 }
+                info!("[{}] Found salt, waiting for other threads to stop", tid);
             });
         }
         info!("initialized {} threads", channel_work_handles.len());
 
         for tid_handles in &channel_work_handles {
             for _ in 0..2 {
-                let work = get_mining_work(&config.clone(), contract.clone(), chain_id.as_u32()).await.unwrap();
+                let work = get_mining_work(&config.clone(), contract.clone(), chain_id.as_u32(), 10_000_000u64).await.unwrap();
                 info!("Sending two initial works");
                 tid_handles.0.send(work);
             }
@@ -172,13 +178,21 @@ async fn main() -> web3::Result<()> {
 
         let mut real_salt = u128::MAX;
         while real_salt == u128::MAX {
-            for tid_handles in &channel_work_handles {
+            for (tid, tid_handles) in (&channel_work_handles).iter().enumerate() {
                 let result = tid_handles.1.try_recv();
                 if !result.is_err() {
                     real_salt = result.unwrap();
-                    debug!("real_salt = {}", real_salt);
                     if real_salt == u128::MAX {
-                        let work = get_mining_work(&config.clone(), contract.clone(), chain_id.as_u32()).await.unwrap();
+                        let thread_hashrate = tid_handles.2.recv().unwrap();
+                        println!("[{}] thread hashrate = {:.3}MH/s",
+                                 tid,
+                                 thread_hashrate/1_000_000f64);
+                        let work = get_mining_work(
+                            &config.clone(),
+                            contract.clone(),
+                            chain_id.as_u32(),
+                            thread_hashrate as u64
+                        ).await.unwrap();
                         tid_handles.0.send(work);
                         info!("No salt found, sending work");
                     } else {

@@ -47,11 +47,7 @@ pub fn ez_cpu_mine (work: &Work) -> u64 {
         }
         if found != u64::MAX { break };
     }
-    let string_hash: String = hash.to_hex();
-    let string_target: String = work.target.to_hex();
-    debug!("Hash:   {}", string_hash);
-    debug!("Target: {}", string_target);
-    return found;
+    found
 }
 
 #[cfg(test)]
