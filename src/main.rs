@@ -170,7 +170,7 @@ async fn main() -> web3::Result<()> {
 
         for tid_handles in &channel_work_handles {
             for _ in 0..2 {
-                let work = get_mining_work(&config.clone(), contract.clone(), chain_id.as_u32(), 10_000_000u64).await.unwrap();
+                let work = get_mining_work(&config.clone(), contract.clone(), chain_id.as_u32(), 1_000_000u64).await.unwrap();
                 info!("Sending two initial works");
                 tid_handles.0.send(work);
             }
@@ -195,7 +195,8 @@ async fn main() -> web3::Result<()> {
                             &config.clone(),
                             contract.clone(),
                             chain_id.as_u32(),
-                            thread_hashrates[tid] as u64
+                            (1.2*thread_hashrates[tid]) as u64
+                            // making end nonce such that thread will work about 1.2 sec
                         ).await.unwrap();
                         tid_handles.0.send(work);
                         info!("No salt found, sending work");

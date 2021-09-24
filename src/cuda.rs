@@ -59,6 +59,6 @@ pub fn mine_cuda(work: &Work) -> u64 {
 }
 
 #[cfg(not(feature = "cuda"))]
-pub fn mine_cuda(work: Work) -> u64 {
+pub fn mine_cuda(work: &Work) -> u64 {
     return u64::MAX;
 }
