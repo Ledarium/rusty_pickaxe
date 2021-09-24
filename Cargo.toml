@@ -4,6 +4,7 @@ version = "0.0.4"
 authors = ["Ledarium tg@amazing_booba"]
 edition = "2018"
 links = "cudart"
+build = "build.rs"
 
 [dependencies]
 rustc-hex = "2.1.0"
@@ -22,6 +23,7 @@ bigint = "4.4.3"
 
 [build-dependencies]
 cc = { version = "1.0", optional = true }
+built = "0.5"
 
 [features]
 cuda = ["cc"]

@@ -6,6 +6,7 @@ static CUDA_PATH: &str = "/opt/cuda/include";
 
 #[cfg(feature = "cuda")]
 fn main() {
+    built::write_built_file().expect("Failed to acquire build-time information");
     cc::Build::new()
         .cuda(true)
         .flag("-cudart=shared")
@@ -24,4 +25,6 @@ fn main() {
 }
 
 #[cfg(not(feature = "cuda"))]
-fn main() {}
+fn main() {
+    built::write_built_file().expect("Failed to acquire build-time information");
+}

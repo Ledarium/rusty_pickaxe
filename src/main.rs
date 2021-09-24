@@ -16,9 +16,10 @@ use secp256k1::SecretKey;
 use bigint::uint::U256 as u256;
 
 mod cuda;
-
 mod cpu;
 mod utils;
+
+const MEGA: f64 = 1_000_000f64;
 
 async fn get_mining_work(
         config: &utils::Config,
@@ -188,8 +189,8 @@ async fn main() -> web3::Result<()> {
                         thread_hashrates[tid] = tid_handles.2.recv().unwrap();
                         println!("[{}] thread hashrate = {:.3}MH/s, total = {:.3}MH/s",
                                  tid,
-                                 thread_hashrates[tid]/1_000_000f64,
-                                 total_hashrate/1_000_000f64);
+                                 thread_hashrates[tid] / MEGA,
+                                 total_hashrate / MEGA);
                         let work = get_mining_work(
                             &config.clone(),
                             contract.clone(),
