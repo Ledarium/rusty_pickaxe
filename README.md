@@ -37,7 +37,11 @@ Install rust: https://www.rust-lang.org/tools/install
 
 `cargo run --features cuda --release config.json`
 
-- Only one GPU in system is supported.
+Only one GPU in system is supported for now. However, you can launch multiple miners
+changing N for every card in system.
+
+- Linux: `CUDA_VISIBLE_DEVICES=N cargo ...`
+- Windows (untested): `set CUDA_VISIBLE_DEVICES=N & cargo ...`
 
 ## Hashrate test
 
@@ -49,8 +53,11 @@ CPU | Single core | Threads | Multi core
 Ryzen 3700X | 2.67 | 16 | ~18.70
 Ryzen 2600 | 2.20 | 12 | ~13.44
 Core i5-9600k@5.0GHz | 2.82 | 6 | ~16.92
-RTX 3070 | 1007 | - | -
-RTX 1080 Ti | 787 | - | -
+3090 | 1700 | - | -
+3070 | 1007 | - | -
+3060 Ti | 1007 | - | -
+2080 Ti | 1200 | - | -
+1080 Ti | 787 | - | -
 =======
 
 
@@ -63,10 +70,10 @@ RTX 1080 Ti | 787 | - | -
 
 - Made it public thanks to generous `wenl#6575`.
 - `Kakapo#5409` made nice json format for config file and wrote install instructions.
-- Also thanks to `Spiry#6864`, `spiz0r#7566` for donations.
+- Also thanks to `Spiry#6864`, `spiz0r#7566`, `shock#9999` for donations.
 - Anonymous donations were also a big help.
 
-Kudos to all of you! Donations are accepted here: [Ethereum](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [Fantom](https://ftmscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77) .
+Kudos to all of you! Donations are accepted here: [Ethereum](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [Fantom](https://ftmscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [BSC](https://bscscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77).
 
 ## Contacts
 

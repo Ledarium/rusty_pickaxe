@@ -2,6 +2,9 @@
 
 ### Added
 - CUDA
+- Better hashrate reporting
+- Job polling
+- Gem count
 
 ## [0.0.4] - 2021-09-22
 
