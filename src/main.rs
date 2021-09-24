@@ -177,21 +177,24 @@ async fn main() -> web3::Result<()> {
         //println!("Diff is {:?}, nonce {}", gem_info.3, second_block.contract_nonce[3]);
 
         let mut real_salt = u128::MAX;
+        let mut thread_hashrates = vec![0f64; (&config).threads];
         while real_salt == u128::MAX {
+            let total_hashrate: f64 = thread_hashrates.iter().copied().sum();
             for (tid, tid_handles) in (&channel_work_handles).iter().enumerate() {
                 let result = tid_handles.1.try_recv();
                 if !result.is_err() {
                     real_salt = result.unwrap();
                     if real_salt == u128::MAX {
-                        let thread_hashrate = tid_handles.2.recv().unwrap();
-                        println!("[{}] thread hashrate = {:.3}MH/s",
+                        thread_hashrates[tid] = tid_handles.2.recv().unwrap();
+                        println!("[{}] thread hashrate = {:.3}MH/s, total = {:.3}MH/s",
                                  tid,
-                                 thread_hashrate/1_000_000f64);
+                                 thread_hashrates[tid]/1_000_000f64,
+                                 total_hashrate/1_000_000f64);
                         let work = get_mining_work(
                             &config.clone(),
                             contract.clone(),
                             chain_id.as_u32(),
-                            thread_hashrate as u64
+                            thread_hashrates[tid] as u64
                         ).await.unwrap();
                         tid_handles.0.send(work);
                         info!("No salt found, sending work");
@@ -201,7 +204,6 @@ async fn main() -> web3::Result<()> {
                     }
                 }
             }
-            debug!("All threads working hard, going to sleep now");
             thread::sleep(time::Duration::from_millis(100));
         }
                 
