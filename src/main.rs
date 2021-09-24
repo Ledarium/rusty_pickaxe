@@ -180,6 +180,7 @@ async fn main() -> web3::Result<()> {
 
         let mut real_salt = u128::MAX;
         let mut thread_hashrates = vec![0f64; (&config).threads];
+        let mut avg_total_hashrate = vec![0f64; 10];
         while real_salt == u128::MAX {
             let total_hashrate: f64 = thread_hashrates.iter().copied().sum();
             for (tid, tid_handles) in (&channel_work_handles).iter().enumerate() {
@@ -188,20 +189,23 @@ async fn main() -> web3::Result<()> {
                     real_salt = result.unwrap();
                     if real_salt == u128::MAX {
                         thread_hashrates[tid] = tid_handles.2.recv().unwrap();
-                        println!("[{}] thread hashrate = {:.3}MH/s, total = {:.3}MH/s, found {} gems",
-                                 tid,
-                                 thread_hashrates[tid] / MEGA,
-                                 total_hashrate / MEGA,
-                                 gems_found);
                         let work = get_mining_work(
                             &config.clone(),
                             contract.clone(),
                             chain_id.as_u32(),
-                            (1.2*thread_hashrates[tid]) as u64
-                            // making end nonce such that thread will work about 1.2 sec
+                            (2.0*thread_hashrates[tid]) as u64
+                            // making end nonce such that thread will work about N sec
                         ).await.unwrap();
                         tid_handles.0.send(work);
                         info!("No salt found, sending work");
+                        avg_total_hashrate.remove(0);
+                        avg_total_hashrate.push(total_hashrate);
+                        let avg_HR: f64 = avg_total_hashrate.iter().copied().sum();
+                        println!("[{}] thread {:.3}MH/s, avg total {:.3}MH/s, found {} gems",
+                                 tid,
+                                 thread_hashrates[tid] / MEGA,
+                                 avg_HR / 10.0 / MEGA,
+                                 gems_found);
                     } else {
                         gems_found += 1;
                         println!("Real salt {}", real_salt);
