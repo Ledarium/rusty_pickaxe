@@ -1,7 +1,7 @@
 use log::{debug, info};
 
 use std::sync::mpsc;
-use std::{thread,time};
+use std::{thread,time, env};
 
 use std::time::Instant;
 use std::fs::File;
@@ -90,6 +90,10 @@ async fn get_mining_work(
 
 #[tokio::main]
 async fn main() -> web3::Result<()> {
+    if env::var("RUST_LOG").is_err() {
+        // change this warn to debug if youre on windows and want support
+        env::set_var("RUST_LOG", "warn")
+    }
     env_logger::init();
     let config_path = std::env::args().nth(1).expect("no config given");
     let mut file = File::open(config_path).unwrap();
