@@ -84,6 +84,7 @@ async fn get_mining_work(
         start_nonce: 0,
         end_nonce: end_nonce,
     };
+    debug!("returning {:?}", work);
     Ok(work)
 }
 

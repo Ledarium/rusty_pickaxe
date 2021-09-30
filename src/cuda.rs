@@ -44,6 +44,7 @@ pub fn mine_cuda(work: &Work) -> u64 {
     let second_block_ptr = second_block_bytes.as_mut_ptr();
     let mut start_nonce = work.start_nonce;
     while start_nonce < work.end_nonce {
+        //debug!("cuda start_nonce={}", start_nonce);
         let ret = unsafe { h_mine(second_block_ptr, work.start_nonce, cuda.counts, target, cuda.block, cuda.grid)};
         if ret != u64::MAX { res_salt = ret; break; }
         start_nonce += cuda.throughput();
