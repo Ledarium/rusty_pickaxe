@@ -7,12 +7,12 @@
     },
     "gem_type": 0,
     "threads": 4,
-    "address": "YOUR ADDRESS HERE",
-    "ding": true,
+    "address": "0xYOUR_ADDRESS_HERE",
+    "threads": 1,
     "cuda": true,
     "loop": true,
     "claim": {
-        "private_key": "PRIVATE KEY HERE",
+        "private_key": "PRIVATE KEY HERE WITHOUT 0x",
         "maximum_gas_price": 500
     }
 }
