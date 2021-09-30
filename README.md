@@ -41,7 +41,16 @@ CPU | Single core | Threads | Multi core
 --- | --- | --- | ---
 Ryzen 3700X | 2.67 | 16 | ~18.70
 Ryzen 2600 | 2.20 | 12 | ~13.44
-Core i5-9600k@5.0GHz | 2.82 | 6 | ~16.92
+i5-9600k@5GHz | 2.82 | 6 | ~16.92
+i7-9700@3GHz | 2.08 | 8 | ~16.64
+i7-10700k@5GHz | 2.50 | 8 | ~20.00
+3090 | 1700 | - | -
+3070 | 1007 | - | -
+3060 Ti | 1007 | - | -
+2080 Ti | 1200 | - | -
+1080 Ti | 787 | - | -
+1060 | 280 | - | -
+1050 Ti | 160 | - | -
 
 
 ## Improvement plan (ordered by priority)
@@ -53,13 +62,16 @@ Core i5-9600k@5.0GHz | 2.82 | 6 | ~16.92
 
 - Made it public thanks to generous `wenl#6575`.
 - `Kakapo#5409` made nice json format for config file and wrote install instructions.
-- Also thanks to `Spiry#6864`, `spiz0r#7566` for donations.
+- Also thanks to `Spiry#6864`, `spiz0r#7566`, `shock#9999` for donations.
 - Anonymous donations were also a big help.
 
-Kudos to all of you! Donations are accepted here: [Ethereum](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [Fantom](https://ftmscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77) .
+Kudos to all of you! Donations are accepted here: [Ethereum](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [Fantom](https://ftmscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [BSC](https://bscscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77).
 
 ## Contacts
 
 - Discord `Booba#1974`
 - Telegram @amazing_booba
 
+## Legal notice
+
+SOFTWARE IS PROVIDED AS IS AND AUTHOR IS NOT RESPONSIBLE FOR ANYTHING.
