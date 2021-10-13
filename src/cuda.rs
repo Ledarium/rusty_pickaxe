@@ -1,16 +1,23 @@
-use rustc_hex::{FromHex, ToHex};
-use std::time::Instant;
-use log::{debug, info};
-use std::convert::TryInto;
 use crate::utils::*;
+use log::{debug, info};
+use rustc_hex::{FromHex, ToHex};
 use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
+use std::time::Instant;
 
 #[cfg(feature = "cuda")]
 #[link(name = "keccak", kind = "static")]
 extern "C" {
     fn h_gpu_init() -> u32;
     fn h_set_block(data: *const u8);
-    fn h_mine(data: *mut u8, start_nonce: u64, counts: u32, target: u64, block: u32, grid: u32) -> u64;
+    fn h_mine(
+        data: *mut u8,
+        start_nonce: u64,
+        counts: u32,
+        target: u64,
+        block: u32,
+        grid: u32,
+    ) -> u64;
 }
 
 #[derive(Debug)]
@@ -29,8 +36,13 @@ impl CudaSettings {
 #[cfg(feature = "cuda")]
 pub fn mine_cuda(work: &Work) -> u64 {
     //let thr_id = 0;
-    let mp_count = unsafe {h_gpu_init()};
-    let cuda = CudaSettings { device_id: 0, block: mp_count, grid: 256, counts: 300 };
+    let mp_count = unsafe { h_gpu_init() };
+    let cuda = CudaSettings {
+        device_id: 0,
+        block: mp_count,
+        grid: 256,
+        counts: 300,
+    };
     debug!("GPU init");
 
     let mut first_block_bytes = serialize_work(&work.first_block);
@@ -45,8 +57,20 @@ pub fn mine_cuda(work: &Work) -> u64 {
     let mut start_nonce = work.start_nonce;
     while start_nonce < work.end_nonce {
         //debug!("cuda start_nonce={}", start_nonce);
-        let ret = unsafe { h_mine(second_block_ptr, work.start_nonce, cuda.counts, target, cuda.block, cuda.grid)};
-        if ret != u64::MAX { res_salt = ret; break; }
+        let ret = unsafe {
+            h_mine(
+                second_block_ptr,
+                work.start_nonce,
+                cuda.counts,
+                target,
+                cuda.block,
+                cuda.grid,
+            )
+        };
+        if ret != u64::MAX {
+            res_salt = ret;
+            break;
+        }
         start_nonce += cuda.throughput();
     }
     debug!("cuda res_salt={}", res_salt);
@@ -68,14 +92,14 @@ pub fn mine_cuda(work: &Work) -> u64 {
 #[cfg(feature = "cuda")]
 #[cfg(test)]
 mod tests {
-    use rustc_hex::ToHex;
-    use crate::utils::*;
     use crate::cpu::simple_hash;
     use crate::cuda::mine_cuda;
-    use web3::types::Address;
-    use std::str::FromStr;
+    use crate::utils::*;
     use bigint::uint::U256 as u256;
     use log::{debug, info};
+    use rustc_hex::ToHex;
+    use std::str::FromStr;
+    use web3::types::Address;
 
     static ZERO_WORK: Work = Work {
         first_block: WorkFirstBlock {
@@ -90,14 +114,14 @@ mod tests {
         second_block: WorkSecondBlock {
             contract_nonce: [0, 0, 0, 0],
             salt: [0; 4],
-            pad_first: 0x01, 
+            pad_first: 0x01,
             pad_last: 0x80, // see keccak specifications for explaination
             zero_pad0: [0; 8],
             zero_pad1: [0; 6],
-        }, 
+        },
         start_nonce: 0,
         end_nonce: 10,
-        target: [0x11; 32]
+        target: [0x11; 32],
     };
 
     fn init() {
