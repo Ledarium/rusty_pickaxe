@@ -3,7 +3,7 @@
 Multithreaded CPU and GPU (CUDA) miner for [Provably Rare Gems](https://gems.alphafinance.io/#/rarity), written in Rust.
 
 There is donation on every found gem. 0.1 FTM for rarity gems and 0.0001 ETH for 
-loot/bloot. You can disable it if you think you do not owe me anything.
+loot. You can disable it in code if you think you do not owe me anything.
 
 ## Config
 

@@ -1,5 +1,7 @@
 use crate::utils::*;
+#[cfg(feature = "cuda")]
 use log::debug;
+#[cfg(feature = "cuda")]
 use std::convert::TryInto;
 
 #[cfg(feature = "cuda")]
@@ -17,6 +19,7 @@ extern "C" {
     ) -> u64;
 }
 
+#[cfg(feature = "cuda")]
 #[derive(Debug)]
 struct CudaSettings {
     pub device_id: u32,
@@ -24,6 +27,7 @@ struct CudaSettings {
     pub grid: u32,
     pub counts: u32,
 }
+#[cfg(feature = "cuda")]
 impl CudaSettings {
     fn throughput(&self) -> u64 {
         (self.counts * self.block * self.grid).into()
