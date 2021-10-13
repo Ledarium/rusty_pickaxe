@@ -1,6 +1,5 @@
 use crate::utils::{serialize_work, Work};
 use log::debug;
-use rustc_hex::ToHex;
 use tiny_keccak::{Hasher, Keccak};
 
 pub fn prepare_data(work: &Work) -> Keccak {
@@ -30,7 +29,7 @@ pub fn simple_hash(work: &Work) -> [u8; 32] {
 pub fn ez_cpu_mine(work: &Work) -> u64 {
     debug!("Got work {:?}", work);
     let keccak = prepare_data(work);
-    let mut hash = [0u8; 32];
+    let mut hash;
     let mut found = u64::MAX;
     for iter in work.start_nonce..work.end_nonce {
         //let salt = rand::thread_rng().gen_range(0..u128::MAX);

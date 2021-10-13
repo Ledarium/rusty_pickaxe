@@ -1,9 +1,6 @@
 use crate::utils::*;
-use log::{debug, info};
-use rustc_hex::{FromHex, ToHex};
-use serde::{Deserialize, Serialize};
+use log::debug;
 use std::convert::TryInto;
-use std::time::Instant;
 
 #[cfg(feature = "cuda")]
 #[link(name = "keccak", kind = "static")]
@@ -45,7 +42,7 @@ pub fn mine_cuda(work: &Work) -> u64 {
     };
     debug!("GPU init");
 
-    let mut first_block_bytes = serialize_work(&work.first_block);
+    let first_block_bytes = serialize_work(&work.first_block);
     unsafe { h_set_block(first_block_bytes.as_ptr()) };
     debug!("Block set");
 

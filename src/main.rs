@@ -3,14 +3,14 @@ use log::{debug, info};
 use std::sync::mpsc;
 use std::{env, thread, time};
 
-use rustc_hex::{FromHex, ToHex};
+use rustc_hex::ToHex;
 use std::fs::File;
 use std::io::{Error, Read};
 use std::str::FromStr;
 use std::time::Instant;
 
 use web3::contract::{Contract, Options};
-use web3::types::{Address, TransactionParameters, Bytes, H160, H256, U256};
+use web3::types::{Address, TransactionParameters, U256};
 
 use bigint::uint::U256 as u256;
 use secp256k1::SecretKey;
@@ -164,16 +164,16 @@ async fn main() -> web3::Result<()> {
             let (work_tx, work_rx) = mpsc::channel();
             let (result_tx, result_rx) = mpsc::channel();
             let (hashrate_tx, hashrate_rx) = mpsc::channel();
-            &channel_work_handles.push((work_tx, result_rx, hashrate_rx));
+            channel_work_handles.push((work_tx, result_rx, hashrate_rx));
             thread::spawn(move || {
                 let mut real_salt = u128::MAX;
                 while real_salt == u128::MAX {
                     let start_time = Instant::now();
                     let mut work = match work_rx.recv() {
                         Ok(work) => work,
-                        Err(e) => break,
+                        Err(_) => break,
                     };
-                    let mut result = u64::MAX;
+                    let result;
                     if cuda_enabled {
                         result = cuda::mine_cuda(&work);
                     } else {
@@ -183,8 +183,8 @@ async fn main() -> web3::Result<()> {
                         let elapsed = start_time.elapsed();
                         hashrate_tx.send(
                             (work.end_nonce - work.start_nonce) as f64 / elapsed.as_secs_f64(),
-                        );
-                        result_tx.send(u128::MAX);
+                        ).unwrap();
+                        result_tx.send(u128::MAX).unwrap();
                         continue;
                     }
                     work.second_block.salt[3] = result;
@@ -193,7 +193,7 @@ async fn main() -> web3::Result<()> {
                     //let string_target: String = work.target.to_hex();
                     //debug!("Target: {}", string_target);
                     debug!("Hash(r): {}", string_hash);
-                    result_tx.send(real_salt);
+                    result_tx.send(real_salt).unwrap();
                     break;
                 }
                 info!("[{}] Found salt, waiting for other threads to stop", tid);
@@ -212,7 +212,7 @@ async fn main() -> web3::Result<()> {
                 .await
                 .unwrap();
                 info!("Sending two initial works");
-                tid_handles.0.send(work);
+                tid_handles.0.send(work).unwrap();
             }
         }
         //println!("Diff is {:?}, nonce {}", gem_info.3, second_block.contract_nonce[3]);
@@ -236,16 +236,16 @@ async fn main() -> web3::Result<()> {
                         )
                         .await
                         .unwrap();
-                        tid_handles.0.send(work);
+                        tid_handles.0.send(work).unwrap();
                         info!("No salt found, sending work");
                         avg_total_hashrate.remove(0);
                         avg_total_hashrate.push(total_hashrate);
-                        let avg_HR: f64 = avg_total_hashrate.iter().copied().sum();
+                        let avg_hashrate: f64 = avg_total_hashrate.iter().copied().sum();
                         println!(
                             "[{}] thread {:.3}MH/s, avg total {:.3}MH/s, found {} gems",
                             tid,
                             thread_hashrates[tid] / MEGA,
-                            avg_HR / 10.0 / MEGA,
+                            avg_hashrate / 10.0 / MEGA,
                             gems_found
                         );
                     } else {

@@ -89,7 +89,6 @@ pub fn vtoa<T, const N: usize>(v: Vec<T>) -> [T; N] {
 #[cfg(test)]
 mod tests {
     use crate::utils::*;
-    use bincode::Options;
     use rustc_hex::ToHex;
     use std::str::FromStr;
     use web3::types::Address;
@@ -114,7 +113,7 @@ mod tests {
     }
     #[test]
     fn test_serialzing_last() {
-        let mut second_block = WorkSecondBlock {
+        let second_block = WorkSecondBlock {
             contract_nonce: [1, 2, 3, 4],
             salt: [u64::MAX; 4],
             pad_first: 0x01, // see keccak specifications for explaination
