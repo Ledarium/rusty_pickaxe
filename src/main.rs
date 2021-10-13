@@ -1,28 +1,35 @@
 use log::{debug, info};
 
 use std::sync::mpsc;
-use std::{thread,time};
+use std::{thread, time};
 
-use std::time::Instant;
-use std::fs::File;
-use std::io::{Read, Error};
-use std::str::FromStr;
 use rustc_hex::{FromHex, ToHex};
+use std::fs::File;
+use std::io::{Error, Read};
+use std::str::FromStr;
+use std::time::Instant;
 
 use web3::contract::{Contract, Options};
 use web3::types::{Address, Bytes, H160, H256, U256};
 
-use secp256k1::SecretKey;
 use bigint::uint::U256 as u256;
-
+use secp256k1::SecretKey;
 
 mod cpu;
 mod utils;
 
 async fn get_mining_work(
-        config: &utils::Config, contract: Contract<web3::transports::Http>, chain_id: u32
-    ) -> Result<utils::Work, Error> {
-    let tx = contract.query("gems", (config.gem_type,), config.address, Options::default(), None); 
+    config: &utils::Config,
+    contract: Contract<web3::transports::Http>,
+    chain_id: u32,
+) -> Result<utils::Work, Error> {
+    let tx = contract.query(
+        "gems",
+        (config.gem_type,),
+        config.address,
+        Options::default(),
+        None,
+    );
     /*
     // implement From or drop this
     // (https://stackoverflow.com/questions/53194323/is-there-any-way-of-converting-a-struct-to-a-tuple)
@@ -39,12 +46,28 @@ async fn get_mining_work(
         pending_manager: Address,
     }
     */
-    let gem_info: (String, String, Vec<u8>, U256, U256, U256, Address, Address, Address) = tx.await.unwrap();
+    let gem_info: (
+        String,
+        String,
+        Vec<u8>,
+        U256,
+        U256,
+        U256,
+        Address,
+        Address,
+        Address,
+    ) = tx.await.unwrap();
     debug!("Got gem_info {:?}", gem_info);
     let entropy = utils::vtoa(gem_info.2);
 
-    let tx = contract.query("nonce", (config.address,), config.address, Options::default(), None);
-    let contract_nonce_tx: (U256, ) = tx.await.unwrap();
+    let tx = contract.query(
+        "nonce",
+        (config.address,),
+        config.address,
+        Options::default(),
+        None,
+    );
+    let contract_nonce_tx: (U256,) = tx.await.unwrap();
 
     //wow ethabi sucks. just spent 5+hours on figuring this stuff out
     let first_block = utils::WorkFirstBlock {
@@ -114,11 +137,10 @@ async fn main() -> web3::Result<()> {
         config.threads = 128;
     }
 
-
     loop {
         //let runtime = Runtime::new().unwrap();
         //
-        
+
         let mut channel_work_handles = vec![];
         for tid in 0usize..config.threads {
             let (work_tx, work_rx) = mpsc::channel();
@@ -135,10 +157,14 @@ async fn main() -> web3::Result<()> {
                     let result = cpu::ez_cpu_mine(&work);
                     if result == u64::MAX {
                         let elapsed = start_time.elapsed();
-                        println!("[{}] Elapsed time: {:.2?}, thread hashrate = {:.3}MH/s",
-                                 tid,
-                                 elapsed,
-                                 (work.end_nonce - work.start_nonce) as f32/elapsed.as_secs_f32()/1_000_000f32);
+                        println!(
+                            "[{}] Elapsed time: {:.2?}, thread hashrate = {:.3}MH/s",
+                            tid,
+                            elapsed,
+                            (work.end_nonce - work.start_nonce) as f32
+                                / elapsed.as_secs_f32()
+                                / 1_000_000f32
+                        );
                         result_tx.send(u128::MAX);
                         continue;
                     }
@@ -156,7 +182,9 @@ async fn main() -> web3::Result<()> {
 
         for tid_handles in &channel_work_handles {
             for _ in 0..2 {
-                let work = get_mining_work(&config.clone(), contract.clone(), chain_id.as_u32()).await.unwrap();
+                let work = get_mining_work(&config.clone(), contract.clone(), chain_id.as_u32())
+                    .await
+                    .unwrap();
                 info!("Sending two initial works");
                 tid_handles.0.send(work);
             }
@@ -171,7 +199,10 @@ async fn main() -> web3::Result<()> {
                     real_salt = result.unwrap();
                     debug!("real_salt = {}", real_salt);
                     if real_salt == u128::MAX {
-                        let work = get_mining_work(&config.clone(), contract.clone(), chain_id.as_u32()).await.unwrap();
+                        let work =
+                            get_mining_work(&config.clone(), contract.clone(), chain_id.as_u32())
+                                .await
+                                .unwrap();
                         tid_handles.0.send(work);
                         info!("No salt found, sending work");
                     } else {
@@ -183,15 +214,23 @@ async fn main() -> web3::Result<()> {
             debug!("All threads working hard, going to sleep now");
             thread::sleep(time::Duration::from_millis(100));
         }
-                
+
         let prvk = SecretKey::from_str(&config.claim.private_key).unwrap(); // TODO: deserializer
         let tx = contract.signed_call_with_confirmations(
-            "mine", (config.gem_type, real_salt), web3::contract::Options::default(), 1, &prvk);
+            "mine",
+            (config.gem_type, real_salt),
+            web3::contract::Options::default(),
+            1,
+            &prvk,
+        );
         for tid_handles in &channel_work_handles {
             drop(&tid_handles.0);
         }
         let tx_result = tx.await.unwrap();
-        println!("Sent TX: {}tx/{:?}", config.network.explorer, tx_result.transaction_hash);
+        println!(
+            "Sent TX: {}tx/{:?}",
+            config.network.explorer, tx_result.transaction_hash
+        );
         /*
         let tx = contract
             .call("mine", (config.gem_type, result), config.address, Options::default())
@@ -201,8 +240,10 @@ async fn main() -> web3::Result<()> {
         //let signed = web3.accounts().sign_transaction(tx, &prvk).await?;
         //
         */
-        if !config.r#loop { break; }
-    };
-     
+        if !config.r#loop {
+            break;
+        }
+    }
+
     Ok(())
 }

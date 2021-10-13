@@ -1,7 +1,7 @@
-use tiny_keccak::{Hasher, Keccak};
+use crate::utils::{serialize_work, Work};
 use log::debug;
 use rustc_hex::ToHex;
-use crate::utils::{Work, serialize_work};
+use tiny_keccak::{Hasher, Keccak};
 
 pub fn prepare_data(work: &Work) -> Keccak {
     let mut h = Keccak::v256();
@@ -27,7 +27,7 @@ pub fn simple_hash(work: &Work) -> [u8; 32] {
     return res;
 }
 
-pub fn ez_cpu_mine (work: &Work) -> u64 {
+pub fn ez_cpu_mine(work: &Work) -> u64 {
     debug!("Got work {:?}", work);
     let keccak = prepare_data(work);
     let mut hash = [0u8; 32];
@@ -37,7 +37,8 @@ pub fn ez_cpu_mine (work: &Work) -> u64 {
         let salt = iter;
         hash = optimized_hash(keccak.clone(), salt);
         //hash = simple_hash(work, salt);
-        for index in 0..32 { //idk rusty way to write this
+        for index in 0..32 {
+            //idk rusty way to write this
             if hash[index] > work.target[index] {
                 break;
             } else if hash[index] < work.target[index] {
@@ -45,7 +46,9 @@ pub fn ez_cpu_mine (work: &Work) -> u64 {
                 break;
             }
         }
-        if found != u64::MAX { break };
+        if found != u64::MAX {
+            break;
+        };
     }
     let string_hash: String = hash.to_hex();
     let string_target: String = work.target.to_hex();
@@ -56,11 +59,11 @@ pub fn ez_cpu_mine (work: &Work) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use rustc_hex::ToHex;
+    use crate::cpu::{optimized_hash, prepare_data, simple_hash};
     use crate::utils::*;
-    use crate::cpu::{prepare_data, optimized_hash, simple_hash};
-    use web3::types::Address;
+    use rustc_hex::ToHex;
     use std::str::FromStr;
+    use web3::types::Address;
 
     static ZERO_WORK: Work = Work {
         first_block: WorkFirstBlock {
@@ -75,14 +78,14 @@ mod tests {
         second_block: WorkSecondBlock {
             contract_nonce: [0, 0, 0, 0],
             salt: [0; 4],
-            pad_first: 0x01, 
+            pad_first: 0x01,
             pad_last: 0x80, // see keccak specifications for explaination
             zero_pad0: [0; 8],
             zero_pad1: [0; 6],
-        }, 
+        },
         start_nonce: 0,
         end_nonce: u64::MAX,
-        target: [0xFE; 32]
+        target: [0xFE; 32],
     };
     #[test]
     fn test_seq_hash() {
@@ -99,7 +102,10 @@ mod tests {
     #[test]
     fn test_zero_simple_hash() {
         let shash: String = simple_hash(&ZERO_WORK).to_hex();
-        assert_eq!(shash, "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9");
+        assert_eq!(
+            shash,
+            "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9"
+        );
     }
 
     #[test]
@@ -110,8 +116,12 @@ mod tests {
                 chain_id: 1u32,
                 entropy: [98u8; 32],
                 _pad2: [0u32; 7],
-                gem_address: Address::from_str("0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0").unwrap().to_fixed_bytes(),
-                sender_address: Address::from_str("0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1").unwrap().to_fixed_bytes(),
+                gem_address: Address::from_str("0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0")
+                    .unwrap()
+                    .to_fixed_bytes(),
+                sender_address: Address::from_str("0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                    .unwrap()
+                    .to_fixed_bytes(),
                 gem_id: 1u32,
             },
             second_block: WorkSecondBlock {
@@ -124,17 +134,23 @@ mod tests {
             },
             start_nonce: 0,
             end_nonce: u64::MAX,
-            target: [0xFE; 32]
+            target: [0xFE; 32],
         };
         let shash: String = simple_hash(&ex_work).to_hex();
-        assert_eq!(shash, "a569d9eb26b08c52dd21a023c8310550767a47c8a33035946ac25d404d7717ab");
+        assert_eq!(
+            shash,
+            "a569d9eb26b08c52dd21a023c8310550767a47c8a33035946ac25d404d7717ab"
+        );
     }
 
     #[test]
     fn test_zero_optimized_hash() {
         let owork = prepare_data(&ZERO_WORK);
         let ohash: String = optimized_hash(owork, 0).to_hex();
-        assert_eq!(ohash, "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9");
+        assert_eq!(
+            ohash,
+            "e1bb54e1bc3af48d01e5dbfc81015c98152a574f6428c6948aa4837c9c0baad9"
+        );
     }
 
     #[test]
@@ -145,7 +161,7 @@ mod tests {
         let mut h0 = Keccak::v256();
         let bytes = serialize_work(&ZERO_WORK);
         h0.update(&bytes);
-        h0.update(&[0u8,16]); //salt high bits
+        h0.update(&[0u8, 16]); //salt high bits
 
         let mut h1 = h0.clone();
         h1.update(&0u128.to_be_bytes());

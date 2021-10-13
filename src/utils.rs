@@ -1,37 +1,40 @@
+use bincode::Options;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use web3::types::Address;
-use bincode::Options;
 
-pub fn serialize_work<T> (pre_work: &T) -> Vec<u8> where T:Serialize {
+pub fn serialize_work<T>(pre_work: &T) -> Vec<u8>
+where
+    T: Serialize,
+{
     return bincode::options()
         .with_fixint_encoding()
         .allow_trailing_bytes()
         .with_big_endian()
-        .serialize(&pre_work).unwrap();
+        .serialize(&pre_work)
+        .unwrap();
 }
 
 #[derive(Clone, Debug, Serialize)]
 pub struct WorkSecondBlock {
     pub contract_nonce: [u64; 4], //256
-    pub salt: [u64; 4], //256
-    pub pad_first: u8, // 8
+    pub salt: [u64; 4],           //256
+    pub pad_first: u8,            // 8
     // wow rust sucks
     pub zero_pad0: [u64; 8], // 512
-    pub zero_pad1: [u8; 6], // 48
-    pub pad_last: u8, // 8
-    // looks like total is 1088, which is what we need
+    pub zero_pad1: [u8; 6],  // 48
+    pub pad_last: u8,        // 8
+                             // looks like total is 1088, which is what we need
 }
 impl WorkSecondBlock {
     pub fn randomize_salt(&mut self) {
         self.salt[2] = rand::thread_rng().gen_range(0..u64::MAX);
     }
     pub fn get_real_salt(&self) -> u128 {
-        u128::from(self.salt[3]) + u128::from(self.salt[2])*(u128::from(u64::MAX)+1)
+        u128::from(self.salt[3]) + u128::from(self.salt[2]) * (u128::from(u64::MAX) + 1)
     }
 }
-
 
 #[derive(Clone, Debug, Serialize)]
 pub struct WorkFirstBlock {
@@ -84,11 +87,11 @@ pub fn vtoa<T, const N: usize>(v: Vec<T>) -> [T; N] {
 
 #[cfg(test)]
 mod tests {
-    use bincode::Options;
     use crate::utils::*;
-    use web3::types::Address;
-    use std::str::FromStr;
+    use bincode::Options;
     use rustc_hex::ToHex;
+    use std::str::FromStr;
+    use web3::types::Address;
 
     #[test]
     fn test_serialzing_first() {
@@ -97,8 +100,12 @@ mod tests {
             chain_id: 1u32,
             entropy: [98u8; 32],
             _pad2: [0u32; 7],
-            gem_address: Address::from_str("0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0").unwrap().to_fixed_bytes(),
-            sender_address: Address::from_str("0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1").unwrap().to_fixed_bytes(),
+            gem_address: Address::from_str("0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0")
+                .unwrap()
+                .to_fixed_bytes(),
+            sender_address: Address::from_str("0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                .unwrap()
+                .to_fixed_bytes(),
             gem_id: 1u32,
         };
         let bytes: String = serialize_work(&ex_first_block).to_hex();
