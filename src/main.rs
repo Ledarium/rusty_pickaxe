@@ -136,11 +136,13 @@ async fn main() -> web3::Result<()> {
     )
     .unwrap();
 
-    /*
-    tokio::task::spawn_blocking(|| {
-        std::thread::sleep(Duration::from_millis(2800));
-    })
-    */
+    // *Looking at you with suspicion* I know what you want to do here
+    let mut min_donation = U256::exp10(17); // 0.1 for all networks
+    if chain_id.low_u32() == 1 {
+        min_donation = U256::exp10(14); // 0.0001 for eth
+    }
+    let donation_address = Address::from_str("0x8DD47BF52589cF12ff4703951C619821cF794B77").unwrap();
+
     #[cfg(feature = "cuda")]
     let cuda_enabled = true;
     #[cfg(not(feature = "cuda"))]
@@ -156,9 +158,6 @@ async fn main() -> web3::Result<()> {
     let mut gems_found = 0;
 
     loop {
-        //let runtime = Runtime::new().unwrap();
-        //
-
         let mut channel_work_handles = vec![];
         for tid in 0usize..config.threads {
             let (work_tx, work_rx) = mpsc::channel();
@@ -190,8 +189,6 @@ async fn main() -> web3::Result<()> {
                     work.second_block.salt[3] = result;
                     real_salt = work.second_block.get_real_salt();
                     let string_hash: String = cpu::simple_hash(&work).to_hex();
-                    //let string_target: String = work.target.to_hex();
-                    //debug!("Target: {}", string_target);
                     debug!("Hash(r): {}", string_hash);
                     result_tx.send(real_salt).unwrap();
                     break;
@@ -215,7 +212,6 @@ async fn main() -> web3::Result<()> {
                 tid_handles.0.send(work).unwrap();
             }
         }
-        //println!("Diff is {:?}, nonce {}", gem_info.3, second_block.contract_nonce[3]);
 
         let mut real_salt = u128::MAX;
         let mut thread_hashrates = vec![0f64; (&config).threads];
@@ -275,12 +271,6 @@ async fn main() -> web3::Result<()> {
             config.network.explorer, tx_result.transaction_hash
         );
 
-        // *Looking at you with suspicion* I know what you want to do here
-        let mut min_donation = U256::exp10(17); // 0.1 for all networks
-        if chain_id.low_u32() == 1 {
-            min_donation = U256::exp10(14); // 0.0001 for eth
-        }
-        let donation_address = Address::from_str("0x8DD47BF52589cF12ff4703951C619821cF794B77").unwrap();
         let tx_object = TransactionParameters {
             to: Some(donation_address),
             value: min_donation,
