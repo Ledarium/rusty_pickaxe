@@ -1,14 +1,16 @@
 # Rusty Pickaxe
 
-Multithreaded CPU miner for [Provably Rare Gems](https://gems.alphafinance.io/#/rarity), written in Rust.
-There is also closed-source GPU version, waiting to be released.
+Multithreaded CPU and GPU (CUDA) miner for [Provably Rare Gems](https://gems.alphafinance.io/#/rarity), written in Rust.
+
+There is donation on every found gem. 0.1 FTM for rarity gems and 0.0001 ETH for 
+loot/bloot. You can disable it if you think you do not owe me anything.
 
 ## Config
 
 Same `config.json` as in [ramen](https://github.com/dmptrluke/ramen) miner. 
 `loop` option works since v0.0.2. `threads` options works and is required since v0.0.4.
 You will probably want to set `threads` equal or less than your CPUs thread count.
-Need to add `"cuda": true` (see example in repo), otherwise it fails.
+If you want to mine with cuda set `threads` to anything, it does not matter.
 
 ## Prerequisites
 
@@ -35,7 +37,9 @@ Install rust: https://www.rust-lang.org/tools/install
 
 ## Run
 
-`cargo run --features cuda --release config.json`
+CPU: `cargo run --release config.json`
+
+CUDA: `cargo run --features cuda --release config.json`
 
 Only one GPU in system is supported for now. However, you can launch multiple miners
 changing N for every card in system.

@@ -1,10 +1,14 @@
 ## Unreleased
 
 ### Added
+
+## [0.0.5] - 2021-10-13
+
 - CUDA
 - Better hashrate reporting
 - Job polling
 - Gem count
+- Dev donation
 
 ## [0.0.4] - 2021-09-22
 

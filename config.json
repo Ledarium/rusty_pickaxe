@@ -9,7 +9,6 @@
     "threads": 4,
     "address": "0xYOUR_ADDRESS_HERE",
     "threads": 1,
-    "cuda": true,
     "loop": true,
     "claim": {
         "private_key": "PRIVATE KEY HERE WITHOUT 0x",

