@@ -12,11 +12,17 @@ Same `config.json` as in [ramen](https://github.com/dmptrluke/ramen) miner.
 You will probably want to set `threads` equal or less than your CPUs thread count.
 If you want to mine with cuda set `threads` to anything, it does not matter.
 
-## Prerequisites
+## Binaries (untested)
+
+Grab one from [releases page](https://github.com/Ledarium/rusty_pickaxe/releases).
+Run it like `rusty_pickaxe.exe config.json`
+
+## Build from source
+### Prerequisites
 
 If following steps do not work for you, you can always ask for support in [Discord](https://discord.gg/xDk6enpGnM).
 
-### Ubuntu
+#### Ubuntu
 
 For cuda install refer to https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html
 
@@ -24,7 +30,7 @@ Install rust: https://www.rust-lang.org/tools/install
 
 Install extra bits: `sudo apt install build-essential libssl-dev pkg-config`
 
-### Windows
+#### Windows
 
 For cuda install refer to https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html
 
@@ -35,7 +41,7 @@ and pick "x64/x86 build tools (latest)".
 
 Install rust: https://www.rust-lang.org/tools/install
 
-### CUDA version
+#### CUDA version
 
 If you are getting errors like this:
 ```
@@ -48,7 +54,7 @@ negatively affect performance. If you are having this issue, see your `compute_X
 [here](https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/)
 and write them replacing predefined ones in `src/build.rs`.
 
-## Run
+### Run
 
 CPU: `cargo run --release config.json`
 
