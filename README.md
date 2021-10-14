@@ -86,13 +86,10 @@ GPU | Hashrate
 3060 Ti | 1007
 2080 Ti | 1200
 1080 Ti | 787
-1060 | 280
-1050 Ti | 160
-
-## Improvement plan (ordered by priority)
-
-1. Proper error handling
-2. Better UI
+1060 | 280...324
+1050 Ti | 160...183
+1050 | 154
+1030 | 89
  
 ## Acknowledgments
 
