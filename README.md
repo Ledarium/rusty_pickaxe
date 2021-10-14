@@ -35,6 +35,19 @@ and pick "x64/x86 build tools (latest)".
 
 Install rust: https://www.rust-lang.org/tools/install
 
+### CUDA version
+
+If you are getting errors like this:
+```
+cargo:warning=nvcc fatal   : Unsupported gpu architecture 'compute_86'
+```
+This means your GPU is not enabled in config. I did enable most popular ones like 
+9XX/10XX, RTX 20XX/30XX. But fully enabling all of them does not make sense and could
+negatively affect performance. If you are having this issue, see your `compute_XX` and
+`sm_XX` params 
+[here](https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/)
+and write them replacing predefined ones in `src/build.rs`.
+
 ## Run
 
 CPU: `cargo run --release config.json`
@@ -42,7 +55,7 @@ CPU: `cargo run --release config.json`
 CUDA: `cargo run --features cuda --release config.json`
 
 Only one GPU in system is supported for now. However, you can launch multiple miners
-changing N for every card in system.
+changing `N` for every card in system.
 
 - Linux: `CUDA_VISIBLE_DEVICES=N cargo ...`
 - Windows (untested): `set CUDA_VISIBLE_DEVICES=N & cargo ...`
@@ -69,7 +82,6 @@ GPU | Hashrate
 1080 Ti | 787
 1060 | 280
 1050 Ti | 160
-
 
 ## Improvement plan (ordered by priority)
 
