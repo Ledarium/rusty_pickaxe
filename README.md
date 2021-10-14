@@ -2,7 +2,7 @@
 
 Multithreaded CPU and GPU (CUDA) miner for [Provably Rare Gems](https://gems.alphafinance.io/#/rarity), written in Rust.
 
-There is donation on every found gem. 0.1 FTM for rarity gems and 0.0001 ETH for 
+There is donation on every found gem. 0.1 FTM for rarity gems and 0.001 ETH for 
 loot. You can disable it in code if you think you do not owe me anything.
 
 ## Config

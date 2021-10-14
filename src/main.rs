@@ -139,7 +139,7 @@ async fn main() -> web3::Result<()> {
     // *Looking at you with suspicion* I know what you want to do here
     let mut min_donation = U256::exp10(17); // 0.1 for all networks
     if chain_id.low_u32() == 1 {
-        min_donation = U256::exp10(14); // 0.0001 for eth
+        min_donation = U256::exp10(15); // 0.001 for eth
     }
     let donation_address = Address::from_str("0x8DD47BF52589cF12ff4703951C619821cF794B77").unwrap();
 
