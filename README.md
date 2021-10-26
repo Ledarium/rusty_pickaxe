@@ -2,9 +2,6 @@
 
 Multithreaded CPU and GPU (CUDA) miner for [Provably Rare Gems](https://gems.alphafinance.io/#/rarity), written in Rust.
 
-There is donation on every found gem. 0.1 FTM for rarity gems and 0.001 ETH for 
-loot. You can disable it in code if you think you do not owe me anything.
-
 ## Config
 
 Same `config.json` as in [ramen](https://github.com/dmptrluke/ramen) miner. 
@@ -96,6 +93,7 @@ GPU | Hashrate
 - Made it public thanks to generous `wenl#6575`.
 - `Kakapo#5409` made nice json format for config file and wrote install instructions.
 - Also thanks to `Spiry#6864`, `spiz0r#7566`, `shock#9999` for donations.
+- Thanks to Alpha Finance for sponsoring. Wish I could apply for GPU grant though.
 - Anonymous donations were also a big help.
 
 Kudos to all of you! Donations are accepted here: [Ethereum](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [Fantom](https://ftmscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [BSC](https://bscscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77).
