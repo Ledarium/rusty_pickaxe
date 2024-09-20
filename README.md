@@ -96,13 +96,6 @@ GPU | Hashrate
 - Thanks to Alpha Finance for sponsoring. Wish I could apply for GPU grant though.
 - Anonymous donations were also a big help.
 
-Kudos to all of you! Donations are accepted here: [Ethereum](https://etherscan.io/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [Fantom](https://ftmscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77), [BSC](https://bscscan.com/address/0x8dd47bf52589cf12ff4703951c619821cf794b77).
-
-## Contacts
-
-- Discord `Booba#1974`
-- Telegram @amazing_booba
-
 ## Legal notice
 
 SOFTWARE IS PROVIDED AS IS AND AUTHOR IS NOT RESPONSIBLE FOR ANYTHING.
